@@ -65,16 +65,30 @@ git stash pop  恢复并删除
 ## Github使用
 
 ```
+git push <remote> <branch> 将本地分支推送到远程库中
 git push origin master 将本地master分支推送到github(github上的远程库创建时名字默认就叫origin)
 git remote rm <name> 删除远程库
 git remote -v 查看远程库性关系
 
 git clone git@github.com:<path> 克隆一个本地库
+
+git pull 抓取远程库的新提交
+git checkout -b branch-name origin/branch-name 本地创建和远程分支对应的分支
+
 ```
 
 
 
+因此，多人协作的工作模式通常是这样：
 
+1. 首先，可以试图用`git push origin <branch-name>`推送自己的修改；
+2. 如果推送失败，则因为远程分支比你的本地更新，需要先用`git pull`试图合并；
+3. 如果合并有冲突，则解决冲突，并在本地提交；
+4. 没有冲突或者解决掉冲突后，再用`git push origin <branch-name>`推送就能成功！
+
+如果`git pull`提示`no tracking information`，则说明本地分支和远程分支的链接关系没有创建，用命令`git branch --set-upstream-to <branch-name> origin/<branch-name>`。
+
+这就是多人协作的工作模式，一旦熟悉了，就非常简单。
 
 ## 分支管理
 
