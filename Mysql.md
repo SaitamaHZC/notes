@@ -928,7 +928,7 @@ on
 
 #### 右外连接/右连接
 
-把right join前的那张表（dept)当作主表，显示所有数据，并拼接上另一张表能拼接上的数据。
+把right join后的那张表（dept)当作主表，显示所有数据，并拼接上另一张表能拼接上的数据。
 
 ```mysql
 select 
@@ -1583,7 +1583,7 @@ create view 视图名 as select * from t1;
 删除：
 
 ```
-drop view 视图名；
+  drop view 视图名；
 ```
 
 
