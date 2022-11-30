@@ -1,4 +1,4 @@
-# SSM
+SSM
 
 ## Mybatis
 
@@ -1996,6 +1996,143 @@ getObject方法返回的是Student 对象，因此容器中管理的是Student�
 
 
 
+#### 基于xml自动装配
+
+```
+自动装配:
+根据指定的策略，在IOC容器中匹配某个bean，自动为bean 中的类类型的属性或接口类型的属性赋值
+可以通过bean标签中的autowire属性设置自动装配的策略
+
+自动装配的策略:
+no, default: 表示不装配，即bean 中的属性不会自动匹配某个bean为属性赋值，此时属性使用默认值
+byType:根据要赋值的属性的类型，在IOC 容器中匹配某个bean,为属性赋值
+byName:根据要赋值的属性的属性名，在IOC 容器中匹配某个bean,为属性赋值（总结:当类型匹配的bean有多个时，此时可以使用byName 实现自动装酣,比如一个类中有Student stu1 ,Student stu2,那么相应地也要匹配两个bean，这时用byName，用的很少）
+
+
+
+注意:
+a>若通过类型没有找到任何一个类型匹配的bean,此时不装配，属性使用默认值
+b>若通过类型找到了多个类型匹配的bean,此时会抛出异常: NoUniqueBeanDefinit ionException
+总结:当使用byType实现自动装配时，IOC容器中有且只有一个类型匹配的bean能够为属性赋值
+```
+
+举例：
+
+School类中含有Class类，Class类中含有student类
+
+自动装配如下：
+
+```xml
+<bean id="school" class="com."  autowire="byType"></bean>
+<bean id="class" class="com."  autowire="byType"></bean>
+<bean id="student" class="com."  >
+    <property name="name" value=""></property>
+    <property name="age" value=""></property>
+</bean>
+
+schoolBean中的属性Class自动匹配到id="class"的 bean并且赋值
+classBean类中的属性Student自动匹配到id="student"的 bean并且赋值
+```
+
+
+
+#### 基于注解管理bean
+
+@Component--------------@Controller、@Service、@Repository
+
+1. 创建配置文件
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+    
+    <!--设置-->
+    <context:component-scan base-package="com.ssm.spring"></context:component-scan>
+    
+    
+</beans>
+```
+
+即可对com.ssm.spring下所有类进行扫描
+
+![image-20221107202811657](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221107202811657.png)
+
+
+
+2.  在对应**类**前加上注解（接口不能加，需要加在实例上）
+
+```java
+@Controller
+public class UserController {
+}
+
+@Repository
+public class UserDaoImpl implements UserDao {
+}
+
+@Service
+public class UserServiceImpl implements UserService {
+}
+
+```
+
+@Controller、@Service、@Repository这三个注解只是在**@Component**注解 的基础上起了三个新的名字，便于程序员查看，本质一样。
+
+
+
+3. 获得并使用bean
+
+
+
+##### 排除组件
+
+1.根据注解类型排除 type="annotation"
+
+2.根据类类型排除	 type="assignable"
+
+```xml
+<context:exclude-filter type="annotation" expression="org.springframework.stereotype.Service"/>
+        <context:exclude-filter type="annotation" expression="org.springframework.stereotype.Controller"/>
+        <context:exclude-filter type="assignable" expression="com.ssm.spring.service.impl.UserServiceImpl"/>
+ </context:component-scan>
+```
+
+
+
+##### 扫描指定组件
+
+首先要设置全部不扫描，才能设置指定扫描
+
+1.根据注解类型扫描 type="annotation"
+
+2.根据类类型扫描	 type="assignable"
+
+```xml
+ <!-- use-default-filters="false" 设置全部不扫描 默认值为true，扫描包下的全部类-->
+<context:component-scan base-package="com.ssm.spring" use-default-filters="false">
+       <context:include-filter type="annotation" expression="org.springframework.stereotype.Service"/>
+        <context:include-filter type="assignable" expression="com.ssm.spring.service.impl.UserServiceImpl"/>
+</context:component-scan>
+```
+
+
+
+
+
+##### 自动装配后的bean ID
+
+**默认情况：**类名首字母小写
+
+**自定义：**注解后括号内写别名
+
+```java
+@Service("UserServiceBean666")
+public class UserServiceImpl implements UserService {
+}
+```
 
 
 
@@ -2005,6 +2142,317 @@ getObject方法返回的是Student 对象，因此容器中管理的是Student�
 
 
 
+#### 基于注解自动装配 @Autowired
+
+在成员变量 / 有参构造 / set方法上添加@Autowired注解
+
+```java
+ @Autowired
+private UserDao userDao;
+//
+//    @Autowired
+//    public UserServiceImpl(UserDao userDao) {
+//        this.userDao = userDao;
+//    }
+//
+//    @Autowired
+//    public void setUserDao(UserDao userDao) {
+//        this.userDao = userDao;
+//    }
+```
+
+```
+@Autowired注解的原理
+
+a>默认通过byType的方式，在IOC 容器中通过类型匹配某个bean为属性赋值
+
+b>若有多个类型匹配的bean，此时会自动转换为byName的方式实现自动装配的效果
+即将要赋值的属性的属性名作为bean的id匹配某个bean为属性赋值
+
+c>若byType和byName的方式都无妨实现自动装配，即IOC 容器中有多个类型匹配的bean
+且这些bean的id和要赋值的属性的属性名都不一-致， 此时抛异常: NoUniqueBeanDefinitionException
+
+d>此时可以在要赋值的属性上,添加一个注解@Qualifier
+通过该注解的value属性值，指定某个bean的id,将这Mbean为属性赋值
+```
+
+![image-20221107212822352](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221107212822352.png)
+
+@Qualifier：
+
+```java
+@Service
+public class UserServiceImpl implements UserService {
+    @Autowired
+    @Qualifier("userDaoImpl")
+    private UserDao userDao;
+}
+```
+
+
+
+如果最后还是找不到：
+
+```java
+@Autowired中有属性required，默认值为true，因此在自动装配无法找到相应的bean时，会装
+配失败
+可以将属性required的值设置为false，则表示能装就装，装不上就不装，此时自动装配的属性为
+默认值
+但是实际开发时，基本上所有需要装配组件的地方都是必须装配的，用不上这个属性。
+
+@Service
+public class UserServiceImpl implements UserService {
+    @Autowired(required = false)
+    @Qualifier("userDaoImpl")
+    private UserDao userDao;
+}
+```
+
+
+
+
+
+### AOP
+
+
+
+#### 动态代理
+
+实现ProxyFactory，输入对象，getProxy获取对象的代理
+
+```java
+-import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
+
+public class ProxyFactory {
+
+    private Object target;
+
+    public ProxyFactory(Object target) {
+        this.target = target;
+    }
+
+    public Object getProxy(){
+        ClassLoader classLoader = target.getClass().getClassLoader();
+        Class<?>[] interfaces = target.getClass().getInterfaces();
+        InvocationHandler invocationHandler = new InvocationHandler(){
+            @Override
+            public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+                Object result = null;
+                try {
+                    System.out.println("方法执行前");
+                    result = method.invoke(target,args);
+                    System.out.println("方法执行后")-;
+                } catch (Exception e) {
+                    System.out.println("出错");
+                    throw new RuntimeException(e);
+                } finally {
+                    System.out.println("结束");
+                }
+                return result;
+            }
+        };
+        return Proxy.newProxyInstance(classLoader,interfaces,invocationHandler)
+    }
+}
+
+```
+
+
+
+
+
+#### AOP概念
+
+AOP（Aspect Oriented Programming）是一种设计思想，是软件设计领域中的面向切面编程，它是面向对象编程的一种补充和完善，它以通过预编译方式和运行期动态代理方式实现在不修改源代码的情况 下给程序动态统一添加额外功能的一种技术。
+
+
+
+![image-20221107234846125](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221107234846125.png)
+
+![image-20221107234853949](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221107234853949.png)
+
+![image-20221107234901915](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221107234901915.png)
+
+![image-20221107234911555](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221107234911555.png)
+
+![image-20221107234925562](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221107234925562.png)
+
+![image-20221107234933536](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221107234933536.png)
+
+
+
+
+
+**作用：**
+
+简化代码：把方法中固定位置的重复的代码抽取出来，让被抽取的方法更专注于自己的核心功能， 提高内聚性。
+
+代码增强：把特定的功能封装到切面类中，看哪里有需要，就往上套，被套用了切面逻辑的方法就 被切面给增强了
+
+
+
+
+
+**技术实现：**
+
+![image-20221107235021086](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221107235021086.png)
+
+
+
+
+
+#### 基本步骤
+
+##### 配置
+
+扫描使用aop的类，并且设置 <aop:aspectj-autoproxy /> 
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <context:component-scan base-package="com.ssm.spring.aoc.annotation" ></context:component-scan>
+    <aop:aspectj-autoproxy />
+</beans>
+```
+
+##### 创建
+
+创建切面类，并在普通类和切面类上添加注解，填入切面表达式
+
+可通过设置joinPoint参数，获得连接点的各种信息
+
+```java
+//类组件，Component标记 
+@Component
+public class CalculatorPureImpl implements Calculator {}
+
+//切面组件，添加aspect注解
+@Component
+@Aspect
+public class LoggerAspect {
+    @Before("execution(* com.ssm.spring.aoc.annotation.*(..))")
+     public void beforeAdviceMethod(JoinPoint joinPoint){
+        Signature signature = joinPoint.getSignature();
+        System.out.println("作用的方法：" + signature);
+        System.out.println("方法名" + signature.getName());
+        System.out.println("方法参数"+ Arrays.toString(joinPoint.getArgs()));
+        System.out.println("前置通知");
+    }
+}
+
+
+```
+
+
+
+##### 通知
+
+![image-20221108201420010](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221108201420010.png)
+
+对于返回和异常通知，可以设置returning和throwing参数，并在参数中加入Object result / Throwable ex ，即可在方法中进行输出
+
+```java
+ @AfterReturning(value = "pointcut()",returning = "result")
+    public void AfterReturningMethod(JoinPoint joinPoint,Object result){
+        System.out.println("返回结果" + result);
+    }
+
+    @AfterThrowing(value = "pointcut()",throwing = "ex")
+    public void AfterReturningMethod(JoinPoint joinPoint,Throwable ex){
+        System.out.println("异常： " + ex);
+    }
+```
+
+对于环绕通知：proceedingJoinPoint.proceed()就表示执行方法，在该行代码之前之后的操作，等同于前置、返回、异常、后置通知操作
+
+```java
+
+    @Around("pointcut()")
+    //环绕通知的方法的返回值要和目标对象方法的返回值一致
+    public Object AroundMethod(ProceedingJoinPoint proceedingJoinPoint){
+        Object result = null;
+        try {
+            System.out.println("环绕通知-->目标对象方法执行之前");
+            //目标方法的执行，目标方法的返回值一定要返回给外界调用者
+            result = proceedingJoinPoint.proceed();
+            System.out.println("环绕通知-->目标对象方法返回值之后");
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+            System.out.println("环绕通知-->目标对象方法出现异常时");
+        } finally {
+            System.out.println("环绕通知-->目标对象方法执行完毕");
+        }
+        return result;
+    }
+```
+
+
+
+##### 运行
+
+从接口.class获得bean。因为是通过代理对象进行操作，无法获得直接操作Impl对象的bean
+
+```java
+ @Test
+    public void testCal(){
+        ApplicationContext ioc =new ClassPathXmlApplicationContext("aoc-annotation.xml");
+        //从接口.class获得bean。因为是通过代理对象进行操作，无法获得直接操作Impl对象的bean
+        Calculator cal = ioc.getBean(Calculator.class);
+        cal.add(1,2);
+    }
+```
+
+
+
+#### 切入表达式
+
+##### 语法
+
+![image-20221108201508396](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221108201508396.png)
+
+```
+@Before("execution(修饰符 返回值 全类名.方法名(参数列表))")
+```
+
+每个部分可通过*来表示全部，参数列表通过..代替，**类名中 *只能代替一部分**
+
+
+
+
+
+##### 重用切入点表达式
+
+@PointCut("切入点表达式")
+
+对于其他通知设置，直接括号内输入对应函数名即可实现重用
+
+```java
+ @Pointcut("execution(* com.ssm.spring.aoc.annotation.*.*(..))")
+    public void pointcut(){}
+
+//在同一个切面中使用
+    @Before("pointcut()")
+    public void beforeAdviceMethod(JoinPoint joinPoint){
+        Signature signature = joinPoint.getSignature();
+        System.out.println("作用的方法：" + signature);
+        System.out.println("方法名" + signature.getName());
+        System.out.println("方法参数"+ Arrays.toString(joinPoint.getArgs()));
+        System.out.println("前置通知");
+    }
+
+//在不同切面中使用
+@Before("com.atguigu.aop.CommonPointCut.pointCut()")
+public void beforeAdviceMethod222(JoinPoint joinPoint){
+     
+    }
+```
 
 
 
@@ -2012,6 +2460,56 @@ getObject方法返回的是Student 对象，因此容器中管理的是Student�
 
 
 
+#### 切面优先级
+
+对于不同切面类设置优先级
+
+```java
+@Order(数字)
+数字越小，优先级越高
+
+
+@Component
+@Aspect
+@Order(1)
+public class AnotherAspect {
+}
+
+@Component
+@Aspect
+@Order(2)
+public class LoggerAspect {
+}
+
+//先执行优先高的切面通知，在执行低的
+```
+
+![image-20221108213351851](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221108213351851.png)
+
+
+
+#### 基于xml的aop(了解)
+
+```xml
+<context:component-scan base-package="com.atguigu.aop.xml"></context:component-scan>
+<aop:config>
+    <!--配置切面类-->
+    <aop:aspect ref="loggerAspect">
+        <aop:pointcut id="pointCut" expression="execution(* com.atguigu.aop.xml.CalculatorImpl.*(..))"/>
+        <aop:before method="beforeMethod" pointcut-ref="pointCut"></aop:before>
+        <aop:after method="afterMethod" pointcut-ref="pointCut"></aop:after>
+        <aop:after-returning method="afterReturningMethod" returning="result"
+        pointcut-ref="pointCut"></aop:after-returning>
+        <aop:after-throwing method="afterThrowingMethod" throwing="ex" pointcutref="pointCut"></aop:after-throwing>
+        <aop:around method="aroundMethod" pointcut-ref="pointCut"></aop:around>
+    </aop:aspect>
+    <aop:aspect ref="validateAspect" order="1">
+        <aop:before method="validateBeforeMethod" pointcut-ref="pointCut">
+        </aop:before>
+    </aop:aspect>
+</aop:config>
+
+```
 
 
 
@@ -2019,20 +2517,802 @@ getObject方法返回的是Student 对象，因此容器中管理的是Student�
 
 
 
+### JDBCTemplate
+
+见资料
+
+
+
+### 声明式事务
+
+编程式：自己写代码实现功能 
+
+**声明式：**通过配置让框架实现功能
+
+好处1：提高开发效率
+
+ 好处2：消除了冗余的代码
+
+ 好处3：框架会综合考虑相关领域中在实际开发环境下有可能遇到的各种问题，进行了健壮性、性能等各个方面的优化
 
 
 
 
 
+####  准备工作
+
+1. 依赖和配置
+
+```xml
+<!-- 基于Maven依赖传递性，导入spring-context依赖即可导入当前所需所有jar包 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+            <version>5.3.1</version>
+        </dependency>
+
+        <!-- Spring 持久化层支持jar包 -->
+        <!-- Spring 在执行持久化层操作、与持久化层技术进行整合过程中，需要使用orm、jdbc、tx三个
+        jar包 -->
+        <!-- 导入 orm 包就可以通过 Maven 的依赖传递性把其他两个也导入 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-orm</artifactId>
+            <version>5.3.1</version>
+        </dependency>
+
+        <!-- Spring 测试相关 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <version>5.3.1</version>
+        </dependency>
+
+        <!-- junit测试 -->
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- MySQL驱动 -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.30</version>
+        </dependency>
+        <!-- 数据源 -->
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>druid</artifactId>
+            <version>1.0.31</version>
+        </dependency>
+
+        <!-- spring-aspects会帮我们传递过来aspectjweaver -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-aspects</artifactId>
+            <version>5.3.1</version>
+        </dependency>
+```
+
+
+
+```xml
+
+    <!--扫描组件-->
+    <context:component-scan base-package="com.ssm.spring"></context:component-scan>
+    <!-- 导入外部属性文件 -->
+    <context:property-placeholder location="classpath:jdbc.properties" />
+    <!-- 配置数据源 -->
+    <bean id="druidDataSource" class="com.alibaba.druid.pool.DruidDataSource">
+        <property name="url" value="${jdbc.url}"/>
+        <property name="driverClassName" value="${jdbc.driver}"/>
+        <property name="username" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+    </bean>
+    <!-- 配置 JdbcTemplate -->
+    <bean id="jdbcTemplate" class="org.springframework.jdbc.core.JdbcTemplate">
+        <!-- 装配数据源 -->
+        <property name="dataSource" ref="druidDataSource"/>
+    </bean>
+
+```
+
+
+
+2. 创建各个controller 、service 、 dao组件，添加注解(Repository/Service/Component/Controller)，自动装配autowired
+3. **加入事务配置**
+
+```xml
+
+<!--    配置事务管理器-->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <property name="dataSource" ref="druidDataSource"></property>
+     </bean>
+<!--开启事务的注解驱动
+通过注解@Transactional所标识的方法或标识的类中所有的方法，都会被事务管理器管理事务
+-->
+<!-- transaction-manager属性的默认值是transactionManager，如果事务管理器bean的id正好就
+是这个默认值，则可以省略这个属性 -->
+    <tx:annotation-driven transaction-manager="transactionManager" />
+</beans>
+```
+
+4. 添加事务注解@Transactional
+
+   因为service层表示业务逻辑层，一个方法表示一个完成的功能，因此处理事务一般在service层处理
 
 
 
 
 
+#### @Transaction属性
+
+```java
+@Transactional(
+        readOnly = true, //只读
+        timeout = 3,     //超时3秒就回滚
+        rollbackFor = {ArithmeticException.class, NoClassDefFoundError.class},	//回滚策略：当出现某个异常时,选择回滚/不回滚，用{}将异常集合包含起
+        rollbackForClassName = {"java.lang.ArithmeticException"},
+        noRollbackFor =,
+        noRollbackForClassName = ,
+        isolation = Isolation.DEFAULT,			//默认
+        isolation = Isolation.READ_UNCOMMITTED,	//读未提交
+        isolation = Isolation.READ_COMMITTED,	//读已提交
+        isolation = Isolation.REPEATABLE_READ,	//重复读
+        isolation = Isolation.SERIALIZABLE		//串行化
+
+)
+```
+
+![image-20221109001753477](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221109001753477.png)
+
+![image-20221109001806254](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221109001806254.png)
+
+![image-20221109001824122](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221109001824122.png)
+
+![image-20221109002226733](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221109002226733.png)
+
+![image-20221109002233274](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221109002233274.png)
+
+
+
+**事务传播行为：**
+
+当事务方法被另一个事务方法调用时，必须指定事务应该如何传播。
+
+例如：方法可能继续在现有事务中运行，也可能开启一个新事务，并在自己的事务中运行。
+
+举例：一个方法中，包含两个update操作，这时一个操作出现错误，是整个方法回滚，还是单个操作对应的方法回滚？
+
+```java
+//使用作为调用者的事务，即整个回滚
+@Transactional(
+        propagation = Propagation.REQUIRED
+)
+
+//使用作为被调用者的事务，即单个回滚
+@Transactional(
+        propagation = Propagation.REQUIRES_NEW
+)
+
+```
 
 
 
 
 
+#### 基于xml的声明式事务
 
+```xml
+
+<!-- <tx:annotation-driven transaction-manager="transactionManager" /> 删除该注解驱动-->
+
+<tx:advice id="tx" transaction-manager="transactionManager"></tx:advice>
+<aop:config>
+    <!-- 配置事务通知和切入点表达式 -->
+    <aop:advisor advice-ref="txAdvice" pointcut="execution(*
+    com.atguigu.spring.tx.xml.service.impl.*.*(..))"></aop:advisor>
+</aop:config>
+<!-- tx:advice标签：配置事务通知 -->
+<!-- id属性：给事务通知标签设置唯一标识，便于引用 -->
+<!-- transaction-manager属性：关联事务管理器 -->
+<tx:advice id="txAdvice" transaction-manager="transactionManager">
+    <tx:attributes>
+        <!-- tx:method标签：配置具体的事务方法 -->
+        <!-- name属性：指定方法名，可以使用星号代表多个字符 -->
+        <tx:method name="get*" read-only="true"/>
+        <tx:method name="query*" read-only="true"/>
+        <tx:method name="find*" read-only="true"/>
+        <!-- read-only属性：设置只读属性 -->
+        <!-- rollback-for属性：设置回滚的异常 -->
+        <!-- no-rollback-for属性：设置不回滚的异常 -->
+        <!-- isolation属性：设置事务的隔离级别 -->
+        <!-- timeout属性：设置事务的超时属性 -->
+        <!-- propagation属性：设置事务的传播行为 -->
+        <tx:method name="save*" read-only="false" rollbackfor="java.lang.Exception" propagation="REQUIRES_NEW"/>
+        <tx:method name="update*" read-only="false" rollbackfor="java.lang.Exception" propagation="REQUIRES_NEW"/>
+        <tx:method name="delete*" read-only="false" rollbackfor="java.lang.Exception" propagation="REQUIRES_NEW"/>
+    </tx:attributes>
+</tx:advice>
+```
+
+
+
+
+
+## SpringMVC
+
+![image-20221109235247022](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221109235247022.png)
+
+### 配置
+
+![image-20221110001425689](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221110001425689.png)
+
+1. 创建web模块。pox.xml中打包方式设置为war <packaging>war</packaging> 。引入依赖
+
+```xml 
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+    <parent>
+        <artifactId>SSM_learning</artifactId>
+        <groupId>org.example</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+    <artifactId>spring_mvc_1</artifactId>
+    <!--打包方式设置为war  --> 
+    <packaging>war</packaging>
+    <name>spring_mvc_1 Maven Webapp</name>
+    <url>http://maven.apache.org</url>
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>3.8.1</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- SpringMVC -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <version>5.3.1</version>
+        </dependency>
+        <!-- 日志 -->
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.2.3</version>
+        </dependency>
+        <!-- ServletAPI -->
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>javax.servlet-api</artifactId>
+            <version>3.1.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Spring5和Thymeleaf整合包 -->
+        <dependency>
+            <groupId>org.thymeleaf</groupId>
+            <artifactId>thymeleaf-spring5</artifactId>
+            <version>3.0.12.RELEASE</version>
+        </dependency>
+    </dependencies>
+    <build>
+        <finalName>spring_mvc_1</finalName>
+    </build>
+</project>
+
+```
+
+2. 配置web.xml
+
+   将DispatcherServlet配置
+
+```xml
+<!DOCTYPE web-app PUBLIC
+ "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
+ "http://java.sun.com/dtd/web-app_2_3.dtd" >
+
+<web-app>
+  <display-name>Archetype Created Web Application</display-name>
+
+  <!-- 配置SpringMVC的前端控制器，对浏览器发送的请求统一进行处理 -->
+  <servlet>
+    <servlet-name>springMVC</servlet-name>
+    <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+    <!-- 通过初始化参数指定SpringMVC配置文件的位置和名称 -->
+    <init-param>
+      <!-- contextConfigLocation为固定值 -->
+      <!-- 使用classpath:表示从类路径查找配置文件，例如maven工程中的src/main/resources -->
+      <param-name>contextConfigLocation</param-name>
+      <param-value>classpath:springMVC.xml</param-value>
+    </init-param>
+    <!--
+    作为框架的核心组件，在启动过程中有大量的初始化操作要做
+    而这些操作放在第一次请求时才执行会严重影响访问速度
+    因此需要通过此标签将启动控制DispatcherServlet的初始化时间提前到服务器启动时
+    -->
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>springMVC</servlet-name>
+    <!--
+    设置springMVC的核心控制器所能处理的请求的请求路径
+    /所匹配的请求可以是/login或.html或.js或.css方式的请求路径
+    但是/不能匹配.jsp请求路径的请求，/*可以匹配任意请求
+    -->
+    <url-pattern>/</url-pattern>
+  </servlet-mapping>
+</web-app>
+
+```
+
+
+
+3. 创建Controller，并添加@Controller注解交给ioc容器管理
+
+```java
+@Controller
+public class HelloController {
+
+
+}
+
+```
+
+
+
+4. springMVC配置文件
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd">
+    <!-- 扫描 -->
+    <context:component-scan base-package="com.ssm.springmvc"></context:component-scan>
+    <!-- 配置Thymeleaf视图解析器 -->
+    <bean id="viewResolver"
+          class="org.thymeleaf.spring5.view.ThymeleafViewResolver">
+        <property name="order" value="1"/>
+        <property name="characterEncoding" value="UTF-8"/>
+        <property name="templateEngine">
+            <bean class="org.thymeleaf.spring5.SpringTemplateEngine">
+                <property name="templateResolver">
+                    <bean
+                            class="org.thymeleaf.spring5.templateresolver.SpringResourceTemplateResolver">
+                        <!-- 视图前缀 -->
+                        <property name="prefix" value="/WEB-INF/templates/"/>
+                        <!-- 视图后缀 -->
+                        <property name="suffix" value=".html"/>
+                        <property name="templateMode" value="HTML5"/>
+                        <property name="characterEncoding" value="UTF-8" />
+                    </bean>
+                </property>
+            </bean>
+        </property>
+    </bean>
+</beans>
+```
+
+
+
+5. 在Controller类中创建请求处理函数
+
+```java
+@Controller
+public class HelloController {
+// @RequestMapping注解：处理请求和控制器方法之间的映射关系
+// @RequestMapping注解的value属性可以通过请求地址匹配请求，/表示的当前工程的上下文路径
+// localhost:8080/springMVC/
+
+    @RequestMapping
+    public String protal(){
+        //将逻辑视图返回,被Thymeleaf视图解析器解析，找到对应路径
+        //Thymeleaf配置中设置了省略的路径
+        //<property name="prefix" value="/WEB-INF/templates/"/>
+        //<property name="suffix" value=".html"/>
+        //这里返回index,Thymeleaf会自动加上前缀/WEB-INF/templates/ 以及后缀.html
+        return "index";
+    }
+}
+
+```
+
+
+
+**流程总结：**
+
+浏览器发送请求，若请求地址符合前端控制器的url-pattern，该请求就会被前端控制器 DispatcherServlet处理。
+
+前端控制器会读取SpringMVC的核心配置文件，通过扫描组件<context:component-scan>找到控制器， 将请求地址和控制器中@RequestMapping注解的value属性值进行匹配，若匹配成功，该注解所标识的 控制器方法就是处理请求的方法。处理请求的方法需要返回一个字符串类型的视图名称，该视图名称会 被视图解析器解析，加上前缀和后缀组成视图的路径，通过Thymeleaf对视图进行渲染，最终转发到视 图所对应页面
+
+
+
+### @RequestMapping
+
+#### 添加注解的位置
+
+用@RequestingMapping标识一个类：设置映射请求的路径的初始信息(初地址)
+
+标识一个方法：设置映射请求的路径的具体信息（详细地址）
+
+```
+@Controller
+@RequestMapping("/test")
+public class HelloController {
+    @RequestMapping("/hello")
+    public String protal(){
+        //将逻辑视图返回,被Thymeleaf视图解析器解析，找到对应路径
+        return "index";
+    }
+}
+```
+
+请求路径最终为：/test/hello
+
+
+
+#### 各个参数
+
+**value:** 设置多个映射地址
+
+```java
+@RequestMapping(
+    value = {"/hello","/test"}
+)
+    public String protal(){
+        //将逻辑视图返回,被Thymeleaf视图解析器解析，找到对应路径
+        return "index";
+    }
+
+//当只有value属性时，可以不用标明value
+@RequestMapping({"/hello","/test"})
+    public String protal(){
+        //将逻辑视图返回,被Thymeleaf视图解析器解析，找到对应路径
+        return "index";
+    }
+
+```
+
+@RequestMapping() 括号中存放路径字符串数组
+
+
+
+**method:**设置通过请求的请求方式（get/post/....）匹配请求映射  
+
+```java
+  @RequestMapping(
+            value = {"/hello","/test"},
+            method ={RequestMethod.GET,RequestMethod.POST,RequestMethod.DELETE}
+    )
+    public String protal(){
+        //将逻辑视图返回,被Thymeleaf视图解析器解析，找到对应路径
+        return "success";
+    }
+```
+
+![image-20221129202316406](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221129202316406.png)
+
+
+
+
+
+**params**：要求请求映射所匹配的请求必须携带param请求参数  
+
+```html
+<a th:href="@{/test(username='admin',password=123456)">测试@RequestMapping的
+params属性-->/test</a><br>
+```
+
+```java
+
+@RequestMapping(
+    value = {"/testRequestMapping", "/test"},
+    method = {RequestMethod.GET, RequestMethod.POST},
+    params = {"username","password!=123456"}
+)
+	public String testRequestMapping(){
+	return "success";
+}	
+```
+
+
+
+headers:映射所匹配的请求必须携带header请求头信息  
+
+```java
+"header"：要求请求映射所匹配的请求必须携带header请求头信息
+"!header"：要求请求映射所匹配的请求必须不能携带header请求头信息
+"header=value"：要求请求映射所匹配的请求必须携带header请求头信息且header=value
+"header!=value"：要求请求映射所匹配的请求必须携带header请求头信息且header!=value
+
+@RequestMapping(
+   	"header"：要求请求映射所匹配的请求必须携带header请求头信息
+    "!header"：要求请求映射所匹配的请求必须不能携带header请求头信息
+    "header=value"：要求请求映射所匹配的请求必须携带header请求头信息且header=value
+    "header!=value"：要求请求映射所匹配的请求必须携带header请求头信息且header!=value
+)
+	public String testRequestMapping(){
+	return "success";
+}	
+```
+
+
+
+#### ant风格路径
+
+？：表示任意的单个字符
+*：表示任意的0个或多个字符
+**：表示任意层数的任意目录  
+
+```
+原地址/test1/test2/abc
+
+?:/test1/test2/a?c
+*:/test1/t*t2/*c
+**: /*/abc
+```
+
+
+
+#### ⭐路径中占位符
+
+@Reques tMapping注解使用路径中的占位符
+传统: /deleteUser?id=1
+rest: /user/delete/1
+需要在@RequestMapping注解的value属性中所设置的路径中，使用{xxx} 的方式表示路径中的数据
+在通过@PathVariable注解，将占位符所标识的值和控制器方法的形参进行绑定
+
+
+
+使用注解@PathVariable，为响应的路径传参
+
+```java
+  @RequestMapping("/test/{id}")
+    public String testREST(@PathVariable("id") String id){
+        return "success";
+    }
+```
+
+
+
+### 获取请求参数
+
+ **1.通过ServletAPI   HttpServletRequest 获取参数**
+
+```java
+@RequestMapping("/testParam")
+public String testParam(HttpServletRequest request){
+    String username = request.getParameter("username");
+    String password = request.getParameter("password");
+    System.out.println("username:"+username+",password:"+password);
+    return "success";
+}
+```
+
+
+
+**2.通过方法的形参 获取参数**
+
+方法的形参中设置和传递参数同名的参数
+
+这里能够接受username和password的参数
+
+```java
+@RequestMapping("/testParam")
+public String testParam(String username, String password){
+    System.out.println("username:"+username+",password:"+password);
+    return "success";
+}	
+```
+
+
+
+**3.@RequestParam**
+
+相比于2 ，可避免不同名的情况
+
+```java
+
+    @RequestMapping("/test")
+    public String getParam(
+            @RequestParam(value = "userName",required = false,defaultValue = "aaa") String username,
+            @RequestParam(value = "passWord",required = true,defaultValue = "123456") String password)
+    {
+        return "success";
+    }
+```
+
+**value：指定为形参赋值的请求参数的参数名**
+**required：设置是否必须传输此请求参数**，默认值为true
+        若设置为true时，则当前请求必须传输value所指定的请求参数，若没有传输该请求参数，且没有设置defaultValue属性，则页面报错400：Required String parameter 'xxx' is not present；若设置为false，则当前请求不是必须传输value所指定的请求参数，若没有传输，则注解所标识的形参的值为null
+
+**defaultValue**：不管required属性值为true或false，当value所指定的请求参数没有传输或传输的值
+为""时，则使用**默认值**为形参赋值  
+
+
+
+**4.@RequestHeader和@CookieValue**
+
+@RequestParam是把请求参数和方法中的形参绑定
+
+@RequestHeader是把请求头信息和方法中的形参绑定
+
+@CookieValue是把cookie数据和方法的形参绑定
+
+value required defaultValue参数都是相通的
+
+```java
+@RequestMapping("/test")
+public String getParam(
+        @RequestParam(value = "userName",required = false,defaultValue = "aaa") String username,
+        @RequestParam(value = "passWord",required = true,defaultValue = "123456") String password,
+        @RequestHeader(value = "referer".....) String referer,
+        @CookieValue(value = "JSESSIONID".....) String jsessionId
+)
+{
+	.........
+    return "success";
+}
+```
+
+当然，获取请求头和cookie数据也可以通过HttpRequestServlet获取
+
+
+
+
+
+5.通过pojo获取参数
+
+创建一个pojo类，请求参数会自动和该类中的参数绑定赋值
+
+```html
+<form th:action="@{/testpojo}" method="post">
+    用户名：<input type="text" name="username"><br>
+    密码：<input type="password" name="password"><br>
+    性别：<input type="radio" name="sex" value="男">男 <input type="radio" name="sex" value="女">女<br>
+    年龄：<input type="text" name="age"><br>
+    邮箱：<input type="text" name="email"><br>
+    <input type="submit">
+</form>
+```
+
+```java
+ @RequestMapping("/testpojo")
+    public String testPojo(User user)
+    {
+        System.out.println(user);
+        return "success";
+    }
+//最终输出username和password（User类中只有id username password三个参数，能和请求参数匹配到的就两个）
+```
+
+
+
+
+
+6.解决乱码问题
+
+第一种方法：在tomcat中更改编码类型
+
+第二种方法：在web.xml中设置SpringMVC提供的编码过滤器CharacterEncodingFilter
+
+```xml
+ //设置编码过滤器
+  <filter>
+    <filter-name>CharacterEncodingFilter</filter-name>
+    <filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+    <init-param>
+      <param-name>encoding</param-name>
+      <param-value>UTF-8</param-value>
+    </init-param>
+    <init-param>
+      <param-name>forceEncoding</param-name>
+      <param-value>true</param-value>
+    </init-param>
+  </filter>
+```
+
+注：
+SpringMVC中处理编码的过滤器一定要配置到其他过滤器之前，否则无效  
+
+
+
+
+
+### 域对象共享数据
+
+域对象见javaWeb中ServletContext
+
+![image-20220820214320497](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20220820214320497.png)
+
+**四个作用**：
+
+1、获取 web.xml 中配置的上下文参数 **context-param** 
+
+2、获取当前的工程路径，格式: /工程路径 
+
+3、获取工程部署后在服务器硬盘上的绝对路径 
+
+4、像 Map 一样存取数据 （设置键值对）
+
+
+
+1. 通过HttpServletRequest 实现
+2. 通过ModelAndView  
+
+```java
+@RequestMapping("/testModelAndView")
+public ModelAndView testModelAndView(){
+    /**
+    * ModelAndView有Model和View的功能
+    * Model主要用于向请求域共享数据
+    * View主要用于设置视图，实现页面跳转
+    */
+     ModelAndView modelAndView = new ModelAndView();
+    //向请求域共享数据
+     modelAndView.addObject("test", "nnnmmmssslll");		//键值对
+    //设置视图，实现页面跳转
+     modelAndView.setViewName("success");
+     return  modelAndView;
+}
+```
+
+页面中设置：
+
+```html
+<body>
+<p th:text="${test}"></p>		//通过key来显示value信息，thymeleaf自动解析
+</body>
+```
+
+3.通过model / map / modelmap
+
+```java
+ @RequestMapping("/testModel")
+    public String testModel(Model model){
+       model.addAttribute("test","testModelhello");
+       return "success";
+    }
+
+    @RequestMapping("/testMap")
+    public String testMap(Map<String,Object> map){
+        map.put("test","testMapNMSL");
+        return "success";
+    }
+
+    @RequestMapping("/testModelMap")
+    public String testModelMap(ModelMap modelMap){
+        modelMap.put("test","testModelMapNMSL");
+        return "success";
+    }
+```
+
+
+
+
+
+向session/application域共享数据：springMVC提供的方法不比ServletAPI简单，所以还是用ServletAPI
+
+```java
+@RequestMapping("/testSession")
+public String testSession(HttpSession session){
+    session.setAttribute("testSessionScope", "hello,session");
+    return "success";
+}
+```
+
+```java
+@RequestMapping("/testApplication")
+public String testApplication(HttpSession session){
+    ServletContext application = session.getServletContext();
+    application.setAttribute("testApplicationScope", "hello,application");
+    return "success";
+}
+```
 
