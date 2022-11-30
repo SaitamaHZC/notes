@@ -1,0 +1,79 @@
+## 解法一：单调栈
+
+维护一个**单调递减栈(非严格)**,从前往后遍历每个数，若当前的数小于等于栈顶元素那么直接入栈,若大于栈顶元素，那么代表必然会有**积水**，因为栈顶元素下面还有比它大的元素，那么此时能够产生的积水高度为min(当前遍历高度, 栈顶元素下一个高度), 如图。
+
+![图片.png](https://pic.leetcode.cn/1669622481-HGJWMB-%E5%9B%BE%E7%89%87.png)
+
+这个积水的宽度为多少呢？宽度就为两个更大元素之间的长度。这之间都会产生相同的雨水。
+![图片.png](https://pic.leetcode.cn/1669622447-ectiEh-%E5%9B%BE%E7%89%87.png)
+
+- 时间复杂度：$O(n)$
+- 空间复杂度：$O(n)$
+
+* []
+
+```Java
+class Solution {
+    public int trap(int[] h) {
+        int n = h.length, ans = 0;
+        Deque<Integer> st = new ArrayDeque<>(); //维护单调递减栈
+        for (int i = 0; i < n; i++) {
+            while (!st.isEmpty() && h[st.peek()] < h[i]) {
+                int idx = st.poll();
+                if (!st.isEmpty()) ans += (i - st.peek() - 1) * (Math.min(h[st.peek()], h[i]) - h[idx]);  
+            } 
+            st.push(i); 
+        }
+        return ans;
+    }
+}
+
+```
+
+## 解法二：前缀和
+
+根据解法一的思路，对于每一列来说，无非是寻找一个前缀最大值和一个后缀最大值,那么当前能产生的雨水面积为$min(前缀最大值，后缀最大值) - h[i]$。
+- 时间复杂度：$O(n)$
+- 空间复杂度：$O(n)$
+
+* []
+
+```Java
+class Solution {
+    public int trap(int[] h) {
+        int n = h.length, ans = 0;
+        int[] left = new int[n], right = new int[n];
+        left[0] = h[0]; right[n - 1] = h[n - 1];
+        for (int i = 1; i < n; i++) {
+            left[i] = Math.max(h[i], left[i - 1]);
+            right[n - i - 1] = Math.max(h[n - i - 1], right[n - i]);
+        }
+        for (int i = 0; i < n; i++) ans += Math.min(left[i], right[i]) - h[i];
+        return ans;
+    }
+}
+```
+
+## 解法三：双指针
+
+可以使用双指针继续优化上面的思路，两个指针l指向第一列，r指向最后一列，分为用变量维护当前指针的前缀和后缀最大值。若当前前缀最大值小于后缀最大值，那么当前列l就可以计算出积水高度，否则r列可以计算出积水高度。
+
+* []
+
+```Java
+class Solution {
+    public int trap(int[] h) {
+        int n = h.length, ans = 0, lmax = h[0], rmax = h[n - 1], l = 0, r = n - 1;
+        while (l <= r) {
+            lmax = Math.max(lmax, h[l]);
+            rmax = Math.max(rmax, h[r]);
+            ans += lmax <= rmax ? lmax - h[l++] : rmax - h[r--];
+        } 
+        return ans;
+    }
+}
+```
+
+- 时间复杂度：$O(n)$
+- 空间复杂度：$O(1)$
+

@@ -1,0 +1,131 @@
+#### [155. 最小栈](https://leetcode-cn.com/problems/min-stack/) (easy)
+
+![ds_145](https://pic.leetcode-cn.com/1637721975-TLbOTI-20211118154017.gif)
+
+- 思路：定义两个栈stack和min_stack，stack正常push，min_stack只会push需要入栈和栈顶中较小的元素。getMin返回min_stack栈顶元素，top返回stack栈顶元素。
+- 复杂度：所有操作的时间复杂度是`O(1)`
+
+js:
+
+* js
+
+```js
+var MinStack = function () {
+    this.stack = [];
+    this.min_stack = [Infinity];
+};
+
+//stack正常push，min_stack只会push需要入栈和栈顶中较小的元素
+MinStack.prototype.push = function (x) {
+    this.stack.push(x);
+    this.min_stack.push(Math.min(this.min_stack[this.min_stack.length - 1], x));
+};
+
+//stack正常pop，min_stack正常pop
+MinStack.prototype.pop = function () {
+    this.stack.pop();
+    this.min_stack.pop();
+};
+
+//返回stack栈顶元素
+MinStack.prototype.top = function () {
+    return this.stack[this.stack.length - 1];
+};
+
+//返回min_stack栈顶元素
+MinStack.prototype.getMin = function () {
+    return this.min_stack[this.min_stack.length - 1];
+};
+
+
+```
+
+java:
+
+* java
+
+```java
+class MinStack {
+  Deque<Integer> stack;
+  Deque<Integer> minStack;
+
+  public MinStack() {
+      stack = new LinkedList<Integer>();
+      minStack = new LinkedList<Integer>();
+      minStack.push(Integer.MAX_VALUE);
+  }
+  
+  public void push(int x) {
+      stack.push(x);
+      minStack.push(Math.min(minStack.peek(), x));
+  }
+  
+  public void pop() {
+      stack.pop();
+      minStack.pop();
+  }
+  
+  public int top() {
+      return stack.peek();
+  }
+  
+  public int getMin() {
+      return minStack.peek();
+  }
+}
+
+```
+
+#### 
+
+#### 视频教程（高效学习）:[点击学习](https://xiaochen1024.com/series/6196129fc1553b002e57bef5/6196208ec1553b002e57bef6)
+
+#### 目录：
+
+[1.开篇介绍](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18)
+
+[2.时间空间复杂度](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/619635dcc1553b002e57bf12)
+
+[3.动态规划](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/61963bcdc1553b002e57bf13)
+
+[4.贪心](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/61963ce5c1553b002e57bf14)
+
+[5.二分查找](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/61963e36c1553b002e57bf15)
+
+[6.深度优先&广度优先](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/61964050c1553b002e57bf16)
+
+[7.双指针](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/619640cec1553b002e57bf17)
+
+[8.滑动窗口](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/61964164c1553b002e57bf18)
+
+[9.位运算](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/6196420ac1553b002e57bf19)
+
+[10.递归&分治](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/61964285c1553b002e57bf1a)
+
+[11剪枝&回溯](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/61964326c1553b002e57bf1b)
+
+[12.堆](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/619643e1c1553b002e57bf1c)
+
+[13.单调栈](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/6196ce3ac1553b002e57bf1f)
+
+[14.排序算法](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/6196ced6c1553b002e57bf20)
+
+[15.链表](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/6196cf7fc1553b002e57bf21)
+
+[16.set&map](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/6196cfc6c1553b002e57bf22)
+
+[17.栈](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/6196d002c1553b002e57bf23)
+
+[18.队列](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/6196d065c1553b002e57bf24)
+
+[19.数组](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/6196d0f9c1553b002e57bf25)
+
+[20.字符串](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/6196d19cc1553b002e57bf26)
+
+[21.树](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/6196d279c1553b002e57bf27)
+
+[22.字典树](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/6196d2c4c1553b002e57bf28)
+
+[23.并查集](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/6196d34dc1553b002e57bf29)
+
+[24.其他类型题](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18/6196d3adc1553b002e57bf2a)
