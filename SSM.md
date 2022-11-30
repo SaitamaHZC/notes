@@ -3316,3 +3316,191 @@ public String testApplication(HttpSession session){
 }
 ```
 
+
+
+
+
+### 视图
+
+视图-----MVC中的View，作用为渲染数据，将模型Model中的数据展示给用户  
+
+SpringMVC视图的种类很多，默认有转发视图和重定向视图
+
+注：（非springmMVC View情况）
+
+当工程引入jstl的依赖，转发视图会自动转换为JstlView；当使用Thymeleaf，由此视图解析器解析之后所得到的是ThymeleafView  
+
+
+
+#### 普通视图
+
+无任何前缀，控制器方法中只返回视图名称字符串 ： 如return "index"
+
+此时使用已经配置的视图技术，例子中用的thymeleaf，最终通过转发的方式实现跳转 
+
+```java
+@RequestMapping("/")
+    public String protal(){
+        //将逻辑视图返回,被Thymeleaf视图解析器解析，找到对应路径
+        return "index";
+    }
+```
+
+
+
+### 转发视图
+
+SpringMVC中默认的转发视图是**InternalResourceView**  
+
+视图名称以"**forward:**"为前缀时，创建InternalResourceView视图，此时的视图**不会被所配置的视图解析器解析**，而是会将前缀"forward:"去掉，剩余部分作为最终路径通过**转发**的方式实现跳转  
+
+```
+
+```
+
+
+
+
+
+#### 重定向视图
+
+SpringMVC中默认的重定向视图是**RedirectView**  
+
+前缀为**redirect:**  ;不会被所配置的视图解析器解析；最终路径通过**重定向**的方式实现跳转  
+
+
+
+
+
+#### view-controller
+
+当控制器方法**仅用来实现页面跳转**，即只返回视图名称时，可以将处理器方法使用**viewcontroller**标签进行表示  
+
+```java
+   @RequestMapping("/")
+    public String protal(){
+        return "index";
+    }
+```
+
+可以在springMVC文件中设置为：
+
+```xml
+<mvc:view-controller path="/" view-name="index"></mvc:view-controller>
+```
+
+
+
+但是！这样设置后，只有view-controller设置的路径才会响应，其他方法的设置的请求映射会失效，因此需要设置
+
+```xml
+<mvc:view-controller path="/" view-name="index"></mvc:view-controller>
+<mvc:annotation-driven />
+```
+
+
+
+
+
+
+
+### RESTful
+
+是一种开发风格，REST：Representational State Transfer，表现层资源状态转移  
+
+
+
+![image-20221130235931323](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221130235931323.png)
+
+
+
+#### HiddenHttpMethodFilter  
+
+浏览器只支持发送get和post方式的请求 ，POST请求可转换为 DELETE 或 PUT 请求 ，需要用到HiddenHttpMethodFilter 处理put和delete请求的条件  
+
+因此get对应查询，post可对应保存、删除delete、更新put
+
+
+
+
+
+首先在web.xml中设置过滤器
+
+```xml
+<filter>
+    <filter-name>HiddenHttpMethodFilter</filter-name>
+    <filter-class>org.springframework.web.filter.HiddenHttpMethodFilter</filter-class>
+  </filter>
+  <filter-mapping>
+    <filter-name>HiddenHttpMethodFilter</filter-name>
+    <url-pattern>/*</url-pattern>
+  </filter-mapping>
+```
+
+然后controller方法中，@RequestMapping添加value和method属性
+
+HiddenHttpMethodFilter 处理put和delete请求的条件：
+a>当前请求的请求方式必须为post
+b>当前请求必须传输请求参数**_method**  ⭐ （例如form表单中添加_method的参数，\_method不要拼错）
+
+即：(若要将 POST 请求转换为 DELETE 或 PUT 请求  ，必须添加method，不然怎么知道qwq)
+
+```JAVA
+@RequestMapping(
+            value = "/testGET",
+            method = RequestMethod.GET
+    )
+    public String getUser(){
+        return "success";
+    }
+
+    @RequestMapping(
+            value = "/testPOST",
+            method = RequestMethod.POST
+    )
+    public String saveUser(){
+        return "success";
+    }
+
+    @RequestMapping(
+            value = "/testDELETE",
+            method = RequestMethod.DELETE
+    )
+    public String deleteUser(){
+        return "success";
+    }
+
+    @RequestMapping(
+            value = "/testPUT",
+            method = RequestMethod.PUT
+    )
+    public String updateUser(){
+        return "success";
+    }
+```
+
+```html
+<form th:action="@{/user}" method= "post" >
+    <input type="submit" value=" 添加用户信息">
+</form>
+<form th:action="@{/user/1}" method= "post">
+    <input type="hidden" name="_method" value="delete">	<!-- _mehthod参数一定要设置-->
+    <input type="submit" value="删除用户信息">
+</form>
+<form th:action="@{/user/1}" method="post">
+    <input type="hidden" name="_method" value="put" >
+    <input type="submit" value="修改用户信息">
+</form>
+```
+
+
+
+注意：CharacterEncodingFilter要放在HiddenHttpMethodFilter 前
+
+![image-20221201003534601](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221201003534601.png)
+
+
+
+
+
+**除了@RequestMapping原生注解，也可以用@GetMapping、@PostMapping、@DeleteMapping、@PutMapping等派生注解**
