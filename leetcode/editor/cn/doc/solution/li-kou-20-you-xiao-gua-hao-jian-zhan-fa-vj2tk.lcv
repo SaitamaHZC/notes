@@ -1,0 +1,78 @@
+> Problem: [20. 有效的括号](https://leetcode.cn/problems/valid-parentheses/description/)
+
+[TOC]
+
+# 思路
+
+> 建栈
+
+# 解题方法
+
+> 用Python建栈，前后求解，不过其实可以省去面向对象编程，节省存储空间，直接用list就可以，不过不建立dict也可应该
+
+# 复杂度
+
+- 时间复杂度:
+
+> 懒
+
+- 空间复杂度:
+
+> 懒
+
+# Code
+
+* []
+
+```Python
+
+class Stack:
+    def __init__(self):
+        self.stack = []
+    
+    def push(self,element):
+        self.stack.append(element)
+    
+    def pop(self):
+        return self.stack.pop()
+    
+    def is_empty(self):
+        return len(self.stack) == 0               
+    
+    def get_top(self):
+        if len(self.stack) > 0:
+            return self.stack[-1]
+        else:
+            return None    
+
+
+class Solution(object):
+    def isValid(self, s):
+        """
+        :type s: str
+        :rtype: bool
+        """
+        flag = True
+        match = {'}':'{',']':'[',')':'('}
+        stack = Stack()   
+        for ch in s:
+            if ch in {'(','[','{'}:
+                stack.push(ch) 
+            else:
+                if stack.is_empty():
+                    return False
+                elif stack.get_top() == match[ch]:
+                    stack.pop()
+                else:
+                    return False  
+        if stack.is_empty():
+            return True
+        else:
+            return False                      
+
+
+
+
+
+```
+

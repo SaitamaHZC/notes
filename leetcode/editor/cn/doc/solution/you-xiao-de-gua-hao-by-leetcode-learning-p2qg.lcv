@@ -1,0 +1,16 @@
+# 📺 视频题解
+
+![第三个.mp4](https://leetcode.cn/problems/valid-parentheses/solution/you-xiao-de-gua-hao-by-leetcode-learning-p2qg/d72d584a-15c9-42da-a021-30e3e1db5e51)
+
+# 📖 知识速递
+
+栈是一种常见的严格限制处理顺序的线性表数据结构，遵循后进先出原则。
+栈的使用场景有：
+- 编程语言的内存管理
+- 函数调用时的上下文管理
+- 深度优先搜索 DFS
+
+> 以上内容出自课程[《队列与栈》](https://leetcode.cn/leetbook/detail/dui-lie-yu-zhan/)
+> [![图片 5.png](https://pic.leetcode.cn/1667455312-ERekdS-%E5%9B%BE%E7%89%87%205.png)](https://leetcode.cn/leetbook/detail/dui-lie-yu-zhan/)
+> 更多队列与栈相关学习内容与应用，欢迎点击👆
+
