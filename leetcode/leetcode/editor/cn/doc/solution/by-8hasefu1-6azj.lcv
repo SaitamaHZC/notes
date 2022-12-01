@@ -1,0 +1,165 @@
+[剑指 Offer II 027. 回文链表](https://leetcode.cn/problems/aMhZSa/) / [234. 回文链表](https://leetcode.cn/problems/palindrome-linked-list/)
+
+- 将全部元素入栈，并按照栈顺序比对链表节点和栈元素是否相等。
+
+* cpp
+
+```cpp
+class Solution {
+public:
+    // 辅助栈 笔试
+    bool isPalindrome(ListNode* head) 
+    {
+        ListNode* cur = head;
+        stack<int> s;
+        while (cur)
+        {
+            s.push(cur->val);
+            cur = cur->next;
+        }
+
+        while (!s.empty())
+        {
+            if (s.top() != head->val)
+                return false;
+            s.pop();
+            head = head->next;
+        }
+
+        return true;
+    }
+};
+```
+
+- 将链表后半部分元素入栈，并按照栈顺序比对链表节点和栈元素是否相等。
+
+* cpp
+
+```cpp
+class Solution {
+public:
+    // 辅助栈
+    bool isPalindrome(ListNode* head) {
+        ListNode* slow = head;
+        ListNode* fast = head;
+
+        while (fast)
+        {
+            if (fast->next == nullptr)
+                break;
+            if (fast->next->next == nullptr)
+                break;
+
+            slow = slow->next;
+            fast = fast->next->next;
+        }
+        // 拿到链表中间位置，将其后半部分入栈
+        stack<int> s;
+        ListNode* cur = slow->next; // 链表长度为偶数时，slow位于上一个中间节点，我们从下一个开始
+        while (cur)
+        {
+            s.push(cur->val);
+            cur = cur->next;
+        }
+
+        // 比较栈元素和链表元素是否相等
+        while (!s.empty())
+        {
+            if (s.top() != head->val)
+                return false;
+            s.pop();
+            head = head->next;
+        }
+        return true;
+    }
+};
+```
+
+- 找到链表中间位置后，将链表后半部分逆置，拿来和原链表比对。
+
+* cpp
+
+```cpp
+class Solution {
+public:
+    //逆置链表后半部分再比较
+    bool isPalindrome(ListNode* head) 
+    {
+        if (head->next == nullptr)
+            return true;
+        if (head->next->next == nullptr)
+            return head->val == head->next->val;
+
+        //找链表中点
+        ListNode* slow = head;
+        ListNode* fast = head;
+        while (fast)
+        {
+            if (!fast->next)
+                break;
+            if (!fast->next->next)
+                break;
+            slow = slow->next;
+            fast = fast->next->next;
+        }
+
+        //逆置后半部分
+        ListNode* prev = nullptr;
+        ListNode* curr = slow->next;
+        ListNode* next = curr->next;
+        // slow->next = nullptr; // 将链表前半部分带上空，不加也行
+
+        while (curr)
+        {
+            curr->next = prev;
+            prev = curr;
+            curr = next;
+            next = (next == nullptr) ? nullptr : curr->next;
+        }
+
+        // 比较前后两个链表是否相等 [head ...] [prev ...] 
+        while (prev) // 判断prev先结束就行，因为如果链表长度为奇数前半部分会多一个
+        {
+            if (prev->val != head->val)
+                return false;
+            prev = prev->next;    
+            head = head->next;
+
+        }
+        return true;   
+    }
+};
+```
+
+- 精简递归：
+- 利用类变量存储链表首元素，再利用递归递归到最后一个节点，从最后一个节点开始比对。
+- 如果当前值和`_head`值相等，则返回真到上一层栈桢，并`_head`跳到下一个节点。
+- 如果不等返回加，如果上一层栈桢返回假直接返回假。
+
+* cpp
+
+```cpp
+class Solution {
+    ListNode* _head;
+public:
+    // 递归
+    bool _isPalindrome(ListNode* head) {
+        if (head == nullptr)
+            return true;
+        if (!_isPalindrome(head->next))
+            return false;
+        if (head->val != _head->val)
+            return false;
+
+        _head = _head->next;
+        return true;
+    }
+    bool isPalindrome(ListNode* head) {
+        _head = head;
+        return _isPalindrome(head);
+    }
+};
+```
+
+### 
+

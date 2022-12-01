@@ -1,0 +1,125 @@
+**方法一：辅助空间+双指针**
+**思路分析：**
+其实看到本题【回文链表】应该会想到之前做的一道题目【回文字符串】，但是两者是有很大区别的因为前者是链表的方式，后者是数组，因为数组支持直接访问但是链表不能，所以最直接的想法就是能不能把链表里面的数据提取出来然后再用【回文字符串】的双指针方法来解决本道题目==》`思维转化`。
+**实现步骤：**
+一共为两个步骤：
+1. 复制链表值到数组中。
+2. 使用双指针法判断是否为回文。
+
+**具体代码如下：**
+
+* 
+
+```
+class Solution {
+public:
+    bool isPalindrome(ListNode* head) {
+        vector<int> res;
+        ListNode* dummyHead = new ListNode(0);
+        dummyHead->next = head;
+        ListNode* cur = dummyHead->next;
+        /* 复制链表数据到数组中 */
+        while(cur != NULL) {     
+            res.push_back(cur->val);
+            cur = cur->next;
+        }
+        /* 双指针遍历数组 */
+        for(int i = 0, j = res.size()-1; i < j; i++, j--) 
+           if (res[i] != res[j]) return false;
+        return true;
+    }
+};
+```
+
+**方法二：递归**
+[【官方题解已经写的非常好了】](https://leetcode-cn.com/problems/palindrome-linked-list-lcci/solution/hui-wen-lian-biao-by-leetcode-solution-6cp3/)
+时间复杂度没啥变化
+
+**方法三：分割链表+快慢指针**
+**思路分析**
+在第一种最可以直接的方法中使用了而外的空间是的算法的空间复杂度变成O(n)，现在想能不能不用辅助空间来判断回文链表当然可以我们要充分利用链表的特点就是插入，删除o(1)的操作，以及回文的特点就是轴对称的关于中间节点，所以我们就可以想如果可以找到链表的中间结点然后将中间结点后面的链表反转过来然后遍历两个分割后的链表就可以知道是否是回文链表。
+**实现步骤**12
+1. 找到中间结点【快慢指针】：当快指针移动到链表的末尾时，慢指针恰好到链表的中间。通过慢指针将链表分为两部分。
+2. 反转后半部分链表【双指针】：使用「206. 反转链表」问题中的解决方法来反转链表的后半部分。
+3. 判断是否回文：比较两个部分的值，当后半部分到达末尾则比较完成，可以忽略计数情况中的中间节点。
+4. 恢复链表：再反转一次恢复链表本身。
+5. 返回结果。
+
+**这里补充一下反转链表重要知识点：**
+- 定义一个cur指针，指向头结点，再定义一个pre指针，初始化为null。
+- 首先要把 cur->next 节点用tmp指针保存一下，也就是保存一下这个节点，为了后面更新 cur 指针。
+- 更新 pre 和 cur 指针。
+
+![image.png](https://pic.leetcode-cn.com/1649851864-HnkTaa-image.png)
+
+`反转链表函数：`
+
+* 
+
+```
+ListNode* reverseList(ListNode* head) {
+        ListNode* cur = head;
+        ListNode* pre = NULL;
+        while(cur) {
+            ListNode* temp = cur->next;
+            /* 翻转操作 改变指针指向 */
+            cur->next = pre; 
+            /* 更新pre 和 cur指针 */
+            pre = cur;
+            cur = temp;
+        }
+        return pre;
+    }
+```
+
+**具体代码如下**
+
+* 
+
+```
+class Solution {
+public:
+    bool isPalindrome(ListNode* head) {
+        if (head == NULL) return true;
+        /* 找到前半部分链表的尾节点并反转后半部分链表 */
+        ListNode* firstHalfEnd = endOfFirstHalf(head);
+        ListNode* secondHalfStart = reverseList(firstHalfEnd->next);
+        /* 判断是否回文 */
+        ListNode* p1 = head;
+        ListNode* p2 = secondHalfStart;
+        bool result = true;
+        while (result && p2 != nullptr) {
+            if (p1->val != p2->val)
+                result = false;
+            p1 = p1->next;
+            p2 = p2->next;
+        }        
+        /* 还原链表并返回结果 */
+        firstHalfEnd->next = reverseList(secondHalfStart);
+        return result;
+    }
+    /* 反转链表 */
+    ListNode* reverseList(ListNode* head) {
+        ListNode* prev = nullptr;
+        ListNode* cur = head;
+        while (cur != nullptr) {
+            ListNode* Tmp = cur->next;
+            cur->next = prev;
+            prev = cur;
+            cur = Tmp;
+        }
+        return prev;
+    }
+    /* 采用快慢指针方法确定中间位置 */
+    ListNode* endOfFirstHalf(ListNode* head) {
+        ListNode* fast = head;
+        ListNode* slow = head;
+        while (fast->next != nullptr && fast->next->next != nullptr) {
+            fast = fast->next->next;
+            slow = slow->next;
+        }
+        return slow;
+    }
+};
+```
+

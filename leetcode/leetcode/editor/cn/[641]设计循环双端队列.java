@@ -53,43 +53,76 @@
 // Related Topics 设计 队列 数组 链表 👍 203 👎 0
 
 
+import java.awt.*;
+
 //leetcode submit region begin(Prohibit modification and deletion)
 class MyCircularDeque {
+    private int []queue;
+    private int rear;
+    private int front;
+    private int size;
 
     public MyCircularDeque(int k) {
-
+        queue = new int[k+1];
+        rear = 0;
+        front = 0;
+        size = k+1;
     }
     
     public boolean insertFront(int value) {
-
+        if(!isFull()){
+            front = (front - 1 + size)%size;
+            queue[front] = value;
+            return true;
+        }else
+            return false;
     }
     
     public boolean insertLast(int value) {
-
+        if(!isFull()){
+            queue[rear] = value;
+            rear = (rear + 1)%size;
+            return true;
+        }else
+            return false;
     }
     
     public boolean deleteFront() {
-
+        if(!isEmpty()){
+            front = (front + 1)%size;
+            return true;
+        }else
+            return false;
     }
     
     public boolean deleteLast() {
-
+        if(!isEmpty()){
+            rear = (rear - 1 + size)%size;
+            return true;
+        }else
+            return false;
     }
     
     public int getFront() {
-
+        if(isEmpty()){
+            return -1;
+        }
+        return queue[front];
     }
     
     public int getRear() {
-
+        if(isEmpty()){
+            return -1;
+        }
+        return queue[(rear - 1 + size) % size];
     }
     
     public boolean isEmpty() {
-
+        return rear == front;
     }
     
     public boolean isFull() {
-
+        return (rear+1)%size == front;
     }
 }
 
