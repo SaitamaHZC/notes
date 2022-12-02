@@ -1524,7 +1524,7 @@ name对应类中的getXXX，setXXX方法中的XXX
  <!--        如果没有name,index属性，必须按构造器顺序-->
 <constructor-arg value="111"></constructor-arg>
 <constructor-arg value="张三" ></constructor-arg>
-<constructor-arg  value="16"></constructor-arg>
+<constructor-arg value="16"></constructor-arg>
 <constructor-arg value="女"></constructor-arg>
 ```
 
@@ -3354,7 +3354,11 @@ SpringMVC中默认的转发视图是**InternalResourceView**
 
 视图名称以"**forward:**"为前缀时，创建InternalResourceView视图，此时的视图**不会被所配置的视图解析器解析**，而是会将前缀"forward:"去掉，剩余部分作为最终路径通过**转发**的方式实现跳转  
 
-```
+```java
+    @RequestMapping("/testForward")
+    public String testForward(ModelMap modelMap){
+        return "forward:/testModelMap";
+    }
 
 ```
 
@@ -3368,7 +3372,13 @@ SpringMVC中默认的重定向视图是**RedirectView**
 
 前缀为**redirect:**  ;不会被所配置的视图解析器解析；最终路径通过**重定向**的方式实现跳转  
 
+```java
 
+    @RequestMapping("/testRedirect")
+    public String testRedirect(ModelMap modelMap){
+        return "redirect:/testModelMap";
+    }
+```
 
 
 
@@ -3398,7 +3408,7 @@ SpringMVC中默认的重定向视图是**RedirectView**
 <mvc:annotation-driven />
 ```
 
-
+<mvc:annotation-driven />先让前端控制器执行，执行不了再让默认控制器执行
 
 
 
@@ -3501,6 +3511,59 @@ b>当前请求必须传输请求参数**_method**  ⭐ （例如form表单中添
 
 
 
-
-
 **除了@RequestMapping原生注解，也可以用@GetMapping、@PostMapping、@DeleteMapping、@PutMapping等派生注解**
+
+
+
+
+
+#### 处理静态资源
+
+添加<mvc:default-servlet-handler/>
+
+```
+<!--
+配置默认的servlet.处理静态资源
+当前工程的web. xml配置的前端控制器DispatcherServlet的url -pattern是/
+tomcat的web. xml配置的Defaul tServlet的url -pattern也是/
+此时，浏览器发送的请求会优先被DispatcherServlet进行处理，但是DispatcherServlet 无法处理静态资源
+若配置了<mvc :default-servlet -handler />，此时浏览器发送的所有请求都会被Defaul tServlet处理
+若配置了<mvc :default-servlet-handler />和<mvc :annotation-driven />浏览器发送的请求会先被DispatcherServlet处理，无法处理在交给Defaul tServlet处理
+-- >
+<mvc:default-servlet-handler/>
+
+<mvc:annotation-driven/>
+```
+
+
+
+
+
+
+
+### SpringMVC处理ajax请求
+
+
+
+@RequestBody 可以获取请求体信息，以此获得前端传来的数据
+
+```java
+ @RequestMapping("/testRequestBody")
+    public String testRequestBody(@RequestBody String requestBody){
+        System.out.println("请求体："+ requestBody);
+        return "success";
+    }
+```
+
+```html
+<!--此时必须使用post请求方式，因为get请求没有请求体-->
+<form th:action="@{/testRequestBody}" method="post">
+    用户名：<input type="text" name="username"><br>
+    密码：<input type="password" name="password"><br>
+    <input type="submit" value="testRequestBody">
+</form>
+```
+
+运行结果：
+
+![image-20221202154844295](C:\Users\Saitama\AppData\Roaming\Typora\typora-user-images\image-20221202154844295.png)
