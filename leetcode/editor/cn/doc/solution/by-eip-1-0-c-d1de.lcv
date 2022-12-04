@@ -1,0 +1,49 @@
+### 解题思路
+
+只需改变结点数据，指针指向不变换。（偷梁换柱）
+
+### 代码
+
+* cpp
+
+```cpp
+/**
+ * Definition for singly-linked list.
+ * struct ListNode {
+ *     int val;
+ *     ListNode *next;
+ *     ListNode() : val(0), next(nullptr) {}
+ *     ListNode(int x) : val(x), next(nullptr) {}
+ *     ListNode(int x, ListNode *next) : val(x), next(next) {}
+ * };
+ */
+class Solution {
+public:
+    ListNode* oddEvenList(ListNode* head) {
+        int j=1;
+        vector<int> vec1;
+        vector<int> vec2;
+        ListNode* head1 = head;
+        ListNode* head2 = head;
+        ListNode* head3 = head2;
+        while(head1){
+            if(j%2==0) vec2.push_back(head1->val);
+            else if(j%2!=0) vec1.push_back(head1->val);
+            head1=head1->next;
+            j++;
+        }
+        for(int i=0;i<vec1.size();i++){
+            head2->val = vec1[i];
+            head2 = head2->next;
+        }
+        for(int i=0;i<vec2.size();i++){
+            head2->val = vec2[i];
+            head2 = head2->next;
+        }
+        return head3;
+
+
+    }
+};
+```
+

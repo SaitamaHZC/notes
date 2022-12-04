@@ -1,0 +1,37 @@
+[详细刷题视频合集](https://xiaochen1024.com/series/6196129fc1553b002e57bef5/6196208ec1553b002e57bef6)      
+[刷题笔记](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18)
+双指针
+
+将原链表分为两个链表，head作为奇数节点组成的链表头，node1作为head中的指针；head2作为偶数节点组成的链表头，node2作为head2中的指针
+head初始只有原链表的第一个节点，head2初始为原链表第一个节点后的所有节点
+将head2中是原始链表中奇数节点的节点依次找出并切割出来，接入到head链表的尾部
+head2链表中所有是原始链表中奇数节点的节点切割完后，再将head2接入head链表的尾部
+
+* 
+
+```
+var oddEvenList = function(head) {
+  if (!(head && head.next)) return head;
+  
+  const head2 = head.next;
+  let node1 = head;
+  head.next = null;
+  let node2 = head2;
+
+  while (node2) {
+    let node2Next = node2.next;
+    node2.next && (node2.next = node2.next.next);
+
+    node1.next = node2Next;
+    if(node1.next) {
+      node1.next.next = null;
+      node1 = node1.next;
+    }
+    node2 = node2.next;
+  }
+  node1.next = head2;
+  return head;
+};
+
+```
+

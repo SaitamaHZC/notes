@@ -1,0 +1,26 @@
+[详细刷题视频合集](https://xiaochen1024.com/series/6196129fc1553b002e57bef5/6196208ec1553b002e57bef6)      
+[刷题笔记](https://xiaochen1024.com/courseware/60b4f11ab1aa91002eb53b18)
+
+创建两个指针分别指向奇偶链表
+奇指针每次指向偶指针的next，偶指针每次指向奇指针的next
+终止条件是偶数指针为空（一共有奇数个节点），或者偶数指针是最后一个节点（一共有偶数个节点）
+
+* 
+
+```
+var oddEvenList = function(head) {
+  if (!head || !head.next) return head
+  let odd = head
+  let even = head.next
+  let evenStart = even
+  while (even && even.next) {
+    odd = odd.next = even.next
+    even = even.next = odd.next
+
+  }
+  odd.next = evenStart
+  return head
+};
+
+```
+
