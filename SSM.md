@@ -3545,7 +3545,9 @@ tomcat的web. xml配置的Defaul tServlet的url -pattern也是/
 
 
 
-@RequestBody 可以获取请求体信息，以此获得前端传来的数据
+#### @RequestBody 
+
+可以获取请求体信息，以此获得前端传来的数据
 
 ```java
  @RequestMapping("/testRequestBody")
@@ -3567,3 +3569,265 @@ tomcat的web. xml配置的Defaul tServlet的url -pattern也是/
 运行结果：
 
 ![image-20221202154844295](C:\Users\Saitama\AppData\Roaming\Typora\typora-user-images\image-20221202154844295.png)
+
+
+
+
+
+#### ⭐@ResponseBody（常用）
+
+用于标识一个控制器方法，该方法的返回值作为响应体，响应到浏览器
+
+ 	
+
+a>导入jackson的依赖
+b>在Spr ingMVC的配置文件中设置<mvc : annotation-driven />
+c>将需要转换为json字符串的java对象直接作为控制器方法的返回值，使用@ResponseBody 注解标识控制器方法
+就可以将java对象直接转换为json字符串，并响应到浏览器
+
+```java
+@RequestMapping("/testResponseBody")
+    @ResponseBody
+    public Map<String,Object> testResponseBody(){
+        User user1 = new User(1001,"admin1","123456",23,"男");
+        User user2 = new User(1002,"admin2","123456",23,"男");
+        User user3 = new User(1003,"admin3","123456",23,"男");
+        Map<String, Object> map = new HashMap<>();
+        map.put("1001", user1);
+        map.put("1002", user2);
+        map.put("1003", user3);
+        return map;
+    }
+```
+
+
+
+
+
+#### @RestController
+
+添加在类上，相当于为类添加@Controller注解，并为类中的每一个方法添加@ResponseBody注解
+
+
+
+
+
+### 上传下载
+
+#### 下载 
+
+1. 方法中设置参数HttpSession session
+
+2. 通过session获得ServletContext
+
+3. ServletContext.getRealPath获得文件路径
+
+   
+
+当方法返回值为void时：
+
+getRealPath中设置空字符串，会自动去查找@RequestMapping("/testDown")中testDown.html路径对应的文件
+
+```java
+ @RequestMapping("/testDown")
+    public void testDown(HttpSession session){
+        ServletContext servletContext = session.getServletContext();
+        String realPath = servletContext.getRealPath("");
+        System.out.println(realPath);
+    }
+```
+
+显示结果：
+
+(thymeleaf中设置)：
+
+```xml
+  <!-- 视图前缀 -->
+  <property name="prefix" value="/WEB-INF/templates/"/>
+  <!-- 视图后缀 -->
+  <property name="suffix" value=".html"/>
+```
+
+![image-20221205105630513](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221205105630513.png)
+
+
+
+当返回值为String时：
+
+会查找target/out中对应的文件
+
+```java
+ @RequestMapping("/testDown")
+    public String testDown(HttpSession session){
+        ServletContext servletContext = session.getServletContext();
+        String realPath = servletContext.getRealPath("");
+        System.out.println(realPath);
+        return "success";
+    }
+```
+
+输出语句：
+
+![image-20221205110111344](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221205110111344.png)
+
+
+
+
+
+正确设置方式：
+
+（ResponseEntity）用于控制器方法的返回值类型，该控制器方法的返回值就是响应到浏览器的响应报文  
+
+MultiValueMap用于传入响应头键值对
+
+```java
+ @RequestMapping("/testDown")
+    public ResponseEntity<byte[]> testDown(HttpSession session) throws IOException {
+        ServletContext servletContext = session.getServletContext();
+        String realPath = servletContext.getRealPath("img");
+        realPath = realPath + File.separator + "1.png"; //File.separator为路径分隔符，通过这种方式动态设置路径
+        //创建输入流
+        InputStream is = new FileInputStream(realPath);
+        //创建字节数组
+        byte[] bytes = new byte[is.available()];
+        //将流读到字节数组中,is.available为输入流长度
+        is.read(bytes);
+        //创建HttpHeaders对象设置响应头信息
+        MultiValueMap<String, String> headers = new HttpHeaders();
+        //设置要下载方式以及下载文件的名字
+        headers.add("Content-Disposition", "attachment;filename=1.png");    //attachment表示以附件方式下载，filename为下载的东西默认名字
+        //设置响应状态码
+        HttpStatus statusCode = HttpStatus.OK;
+        //创建ResponseEntity对象
+        ResponseEntity<byte[]> responseEntity = new ResponseEntity<>(bytes, headers, statusCode);
+        //关闭输入流
+        is.close();
+        return responseEntity;
+
+    }
+```
+
+
+
+
+
+#### 上传
+
+SpringMVC中将上传的文件封装到MultipartFile对象中，通过此对象可以获取文件相关信息  
+
+MultipartFile参数名要与上传文件名想对应
+
+
+
+1. 添加依赖
+
+   ```xml
+    <dependency>
+        <groupId>commons-fileupload</groupId>
+        <artifactId>commons-fileupload</artifactId>
+        <version>1.3.1</version>
+   </dependency>
+   ```
+
+2. springmvc配置文件中添加
+
+   ```xml
+    <mvc:annotation-driven />
+   <!--必须通过文件解析器的解析才能将文件转换为MultipartFile对象,且MVC通过ID获取，要设置id属性-->
+   <bean id="multipartResolver"
+         class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+   </bean>
+   ```
+
+3. 
+
+```java
+  @RequestMapping("testUpload")
+    public String testUpload(MultipartFile photo,HttpSession session) throws IOException {
+        System.out.println(photo.getOriginalFilename());  //获取上传的文件名
+        ServletContext servletContext = session.getServletContext();
+        String path = servletContext.getRealPath("photo");  //获取上传文件所在路径
+        System.out.println(path);
+        File file = new File(path);         //判断该路径目录是否存在，不存在则创建一个
+        if(!file.exists()){
+            file.mkdir();
+        }
+        String finalPath = path + File.separator + photo.getOriginalFilename(); 
+        photo.transferTo(new File(finalPath));   //导入
+        return "success";
+    }
+```
+
+```html
+<!--enctype="multipart/form-data" 以二进制方式传输文件到服务器-->
+<form th:action="@{/testUpload}" method = "post" enctype="multipart/form-data">
+    图片：<input type="file" name="photo"> <br/>
+    <input type="submit" value="上传"> <br/>
+</form>
+```
+
+
+
+**解决上传文件名重复问题：**
+
+通过UUID更改文件名；
+
+```java
+ String filename = photo.getOriginalFilename(); //获取上传的文件名
+String houzhui_name = filename.substring(filename.lastIndexOf("."));		//字符串截取，截取后缀
+String uuid = UUID.randomUUID().toString();
+filename = uuid + houzhui_name;
+
+//后续操作和上述相同
+```
+
+
+
+
+
+
+
+### 拦截器
+
+1. 创建HandlerInterceptor的实现类，添加注解，扫描为bean
+
+```java
+@Component
+public class firstInterceptor implements HandlerInterceptor {
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        System.out.println("preHandle执行在控制器方法之前");
+        return true;
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+        System.out.println("postHandle执行在控制器方法之后");
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        System.out.println("afterCompletion执行在处理完视图和模型数据之后");
+    }
+}
+```
+
+2. 配置文件中添加interceptor
+
+```xml
+ <mvc:interceptors>
+     <mvc:interceptor>
+         <!--配置需要拦截的请求的请求路径，/**表示所有请求-->
+		<mvc:mapping path="/**"/>
+		<!--配置需要排除拦截的请求的请求路径-->
+         <mvc:exclude-mapping path="/abc"/>
+		<!--配置拦截 -->
+         <ref bean="firstInterceptor"></ref>
+     </mvc:interceptor>
+
+</mvc:interceptors>
+```
+
+执行顺序：
+
+![image-20221205142413016](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221205142413016.png)
