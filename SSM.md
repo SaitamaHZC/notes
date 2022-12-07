@@ -3453,7 +3453,7 @@ HiddenHttpMethodFilter 处理put和delete请求的条件：
 a>当前请求的请求方式必须为post
 b>当前请求必须传输请求参数**_method**  ⭐ （例如form表单中添加_method的参数，\_method不要拼错）
 
-即：(若要将 POST 请求转换为 DELETE 或 PUT 请求  ，必须添加method，不然怎么知道qwq)
+即：(若要将 POST 请求转换为 DELETE 或 PUT 请求  ，必须添加method，不然怎么知道)
 
 ```JAVA
 @RequestMapping(
@@ -3742,7 +3742,7 @@ MultipartFile参数名要与上传文件名想对应
 3. 
 
 ```java
-  @RequestMapping("testUpload")
+  @RequestMapping("/testUpload")
     public String testUpload(MultipartFile photo,HttpSession session) throws IOException {
         System.out.println(photo.getOriginalFilename());  //获取上传的文件名
         ServletContext servletContext = session.getServletContext();
@@ -3831,3 +3831,83 @@ public class firstInterceptor implements HandlerInterceptor {
 执行顺序：
 
 ![image-20221205142413016](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221205142413016.png)
+
+
+
+
+
+### 异常处理器
+
+spingMVC提供了一个处理控制器方法执行过程中所出现的异常的接口：HandlerExceptionResolver  
+
+并且提供默认的实现类：DefaultHandlerExceptionResolver  
+
+![image-20221206133443681](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221206133443681.png)
+
+如果要自己实现一个异常处理器，就需要配置SimpleMappingExceptionResolver
+
+
+
+#### 基于配置的异常处理
+
+```xml
+<bean class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">
+    <property name="exceptionMappings">
+        <props>
+            <!--properties的键表示处理器方法执行过程中出现的异常
+                properties的值表示若出现指定异常时，设置一个新的视图名称，跳转到指定页面-->
+            <prop key="java.lang.ArithmeticException">error</prop>
+        </props>
+    </property>
+    <!--exceptionAttribute属性设置一个属性名，将出现的异常信息在请求域中进行共享-->
+    <property name="exceptionAttribute" value="ex"></property>
+</bean>
+```
+
+
+
+当出现异常时，就会根据property的设置进行跳转和异常信息共享。例如：
+
+```java
+ @RequestMapping("/")
+    public String protal(){
+        //将逻辑视图返回,被Thymeleaf视图解析器解析，找到对应路径
+        System.out.println(1/0);
+        return "index";
+    }
+```
+
+```html
+<body>
+    error
+<a th:text="${error_info}"></a>
+</body>
+```
+
+显示：
+
+![image-20221206134853288](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221206134853288.png)
+
+
+
+
+
+
+
+#### 基于注解的异常处理
+
+创建controller，添加@ControllerAdvice注解
+
+```java
+//@ControllerAdvice将当前类标识为异常处理的组件
+@ControllerAdvice
+public class ExceptionController {
+    //@ExceptionHandler用于设置所标识方法处理的异常
+    @ExceptionHandler(ArithmeticException.class)
+    public String handleException1(Throwable ex_info, Model model){	//ex表示当前请求处理中出现的异常对象
+        model.addAttribute("ex_info",ex_info);				//通过model共享域数据
+        return "error";										//跳转
+    }
+}
+```
+
