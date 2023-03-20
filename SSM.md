@@ -3911,3 +3911,879 @@ public class ExceptionController {
 }
 ```
 
+
+
+
+
+### 注解配置springMVC
+
+见SSM整合
+
+
+
+### SpringMVC执行流程
+
+1) 用户向服务器发送请求，请求被SpringMVC 前端控制器 DispatcherServlet捕获。
+
+2) DispatcherServlet对请求URL进行解析，得到请求资源标识符（URI），判断请求URI对应的映射：
+
+   URL对应浏览器地址，URI对应服务器中请求文件的地址
+
+   ```xml
+    <servlet>
+       <servlet-name>springMVC</servlet-name>
+       <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+       <init-param>
+         <param-name>contextConfigLocation</param-name>
+         <param-value>classpath:springMVC.xml</param-value>
+       </init-param>
+       <load-on-startup>1</load-on-startup>
+     </servlet>
+   
+     <servlet-mapping>
+       <servlet-name>springMVC</servlet-name>
+       <!--URL-->
+       <url-pattern>/</url-pattern>
+     </servlet-mapping>
+   ```
+
+   a) 不存在
+   i. 再判断是否配置了mvc:default-servlet-handler
+   ii. 如果没配置，则控制台报映射查找不到，客户端展示404错误  
+
+   iii. 如果有配置，则访问目标资源（一般为静态资源，如：JS,CSS,HTML），找不到客户端也会展示404
+   错误  
+
+   b) 存在则执行下面的流程
+
+3. 根据该URI，调用HandlerMapping获得该Handler配置的所有相关的对象（包括Handler对象以及
+   Handler对象对应的拦截器），最后以HandlerExecutionChain执行链对象的形式返回。
+4.  DispatcherServlet 根据获得的Handler，选择一个合适的HandlerAdapter。
+5. 如果成功获得HandlerAdapter，此时将开始执行拦截器的preHandler(…)方法【正向】
+6.  提取Request中的模型数据，填充Handler入参，开始执行Handler（Controller)方法，处理请求。
+   在填充Handler的入参过程中，根据你的配置，Spring将帮你做一些额外的工作：
+   a) HttpMessageConveter： 将请求消息（如Json、xml等数据）转换成一个对象，将对象转换为指定
+   的响应信息
+   b) 数据转换：对请求消息进行数据转换。如String转换成Integer、Double等
+   c) 数据格式化：对请求消息进行数据格式化。 如将字符串转换成格式化数字或格式化日期等
+   d) 数据验证： 验证数据的有效性（长度、格式等），验证结果存储到BindingResult或Error中
+7. Handler执行完成后，向DispatcherServlet 返回一个ModelAndView对象。
+8. 此时将开始执行拦截器的postHandle(...)方法【逆向】。
+9. 根据返回的ModelAndView（此时会判断是否存在异常：如果存在异常，则执行HandlerExceptionResolver进行异常处理）选择一个适合的ViewResolver进行视图解析，根据Model和View，来渲染视图。
+10. 渲染视图完毕执行拦截器的afterCompletion(…)方法【逆向】。
+11.  将渲染结果返回给客户端。  
+
+​	
+
+
+
+## 整合
+
+#### ContextLoaderListener  
+
+springMVC的控制器Controller中会包含service类，Controller的bean在SpringMVC的IOC中，Service的bean在Spring的IOC中
+
+SpringMVC的IOC容器在DispatcherServlet初始化时获取，如果加了<load-on-startup>1</load-on-startup>标签，那么将在服务器启动时获取
+
+```xml
+<servlet>
+    <servlet-name>springMVC</servlet-name>
+    <servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+
+    <init-param>
+      <!-- contextConfigLocation为固定值 -->
+      <!-- 使用classpath:表示从类路径查找配置文件，例如maven工程中的src/main/resources -->
+      <param-name>contextConfigLocation</param-name>
+      <param-value>classpath:springMVC.xml</param-value>
+    </init-param>
+  <!--
+    作为框架的核心组件，在启动过程中有大量的初始化操作要做
+    而这些操作放在第一次请求时才执行会严重影响访问速度
+    因此需要通过此标签将启动控制DispatcherServlet的初始化时间提前到服务器启动时
+    -->
+    <load-on-startup>1</load-on-startup>
+  </servlet>
+```
+
+在服务器启动时完成对IOC中Controller的装配，而Cnotroller中的Service类需要提前装配好，因此**Spring的IOC需要提前于SpringMVC的IOC创建装配好**
+
+此时用到**ContextLoaderListener**  
+
+
+
+源码：
+
+DispatcherServlet初始化时会createWebApplicationContext，其中创建SpringMVC的IOC容器，该容器会把Spring的容器作为父容器。 wac.setParent(parent);
+
+```java
+protected WebApplicationContext createWebApplicationContext(@Nullable
+ApplicationContext parent) {
+    Class<?> contextClass = getContextClass();
+    if (!ConfigurableWebApplicationContext.class.isAssignableFrom(contextClass)){
+    throw new ApplicationContextException("Fatal initialization error in servlet with name '" +
+    getServletName() +"': custom WebApplicationContext class [" + contextClass.getName() +
+    "] is not of type ConfigurableWebApplicationContext");
+    } /
+    / 通过反射创建 IOC 容器对象
+    ConfigurableWebApplicationContext wac =(ConfigurableWebApplicationContext)BeanUtils.instantiateClass(contextClass);
+    wac.setEnvironment(getEnvironment());
+    // 设置父容器，即Spring的IOC
+    wac.setParent(parent);
+    String configLocation = getContextConfigLocation();
+    if (configLocation != null) {
+    	wac.setConfigLocation(configLocation);
+    } 
+    configureAndRefreshWebApplicationContext(wac);
+    return wac;
+}
+```
+
+Spring提供了监听器ContextLoaderListener，实现ServletContextListener接口，可监听ServletContext的状态，**在web服务器的启动，读取Spring的配置文件，创建Spring的IOC容器。**web应用中必须在web.xml中配置  
+
+```xml
+<listener>
+    <!--配置Spring的监听器，在服务器启动时加载Spring的配置文件
+    Spring配置文件默认位置和名称：/WEB-INF/applicationContext.xml
+    可通过上下文参数自定义Spring配置文件的位置和名称-->
+    <listenerclass>org.springframework.web.context.ContextLoaderListener</listener-class>
+</listener>
+<!--自定义Spring配置文件的位置和名称-->
+<context-param>
+    <param-name>contextConfigLocation</param-name>
+    <param-value>classpath:spring.xml</param-value>
+</context-param>
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# SpringBoot2
+
+springBoot2  2.76  要求Java8以上,maven3.5+    3.0需要Java17 maven3.5+
+
+
+
+## helloworld
+
+1. 引入依赖 pom.xml
+
+   ```xml
+    <parent>
+       <groupId>org.springframework.boot</groupId>
+       <artifactId>spring-boot-starter-parent</artifactId>
+       <version>2.7.6</version>
+     </parent>
+   
+     <dependencies>
+       <dependency>
+         <groupId>org.springframework.boot</groupId>
+         <artifactId>spring-boot-starter-web</artifactId>
+       </dependency>
+     </dependencies>
+   ```
+
+2. 创建主程序类
+
+   ```java
+   /**
+    * 主程序类
+    * @SpringBootApplication声明这是一个SpringBoot应用
+    */
+   @SpringBootApplication
+   public class MainApplication {
+       public static void main(String[] args) {
+           SpringApplication.run(MainApplication.class,args);
+       }
+   }
+   ```
+
+3. 编写业务 
+
+   一个简单controller
+
+   ```java
+   @RestController	//该Controller所有方法的返回值作为请求体
+   public class helloController {
+       @RequestMapping("/hello")
+       public String test01(){
+           return "hello Springboot2";
+       }
+   }
+   ```
+
+4. 简化部署
+
+   生成一个可执行jar包，便于直接部署到服务器
+
+   pom.xml中设置
+
+   ```xml
+   <build>
+       <plugins>
+           <plugin>
+               <groupId>org.springframework.boot</groupId>
+               <artifactId>spring-boot-maven-plugin</artifactId>
+           </plugin>
+       </plugins>
+   </build>
+   ```
+
+   
+
+## application.properties
+
+官方文档可查看
+
+![image-20221219175944328](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221219175944328.png)
+
+
+
+## 版本仲裁 （调整各类依赖的版本）
+
+
+
+### starter场景启动器
+
+引入了starter，那么就可以将里面所包含的依赖全部引入
+
+1、见到很多 spring-boot-starter-* ： *就某种场景
+2、只要引入starter，这个场景的所有常规需要的依赖我们都自动引入
+3、SpringBoot所有支持的场景
+https://docs.spring.io/spring-boot/docs/current/reference/html/using-spring-boot.html#using-boot-starter
+4、见到的  *-spring-boot-starter： 第三方为我们提供的简化开发的场景启动器。
+5、所有场景启动器最底层的依赖
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter</artifactId>
+  <version>2.3.4.RELEASE</version>
+  <scope>compile</scope>
+</dependency>
+```
+
+
+
+### 版本仲裁
+
+maven中设置的spring-boot-starter-parent 从属于spring-boot-dependencies，spring-boot-dependencies里面包含了各种依赖，设置了默认版本（**自动版本仲裁**）
+
+![image-20221219181705830](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221219181705830.png)
+
+
+
+如果要修改版本号：
+
+1、查看spring-boot-dependencies里面规定当前依赖的版本 用的 key。
+2、在当前项目里面重写配置
+
+```xml
+    <properties>
+        <mysql.version>5.1.43</mysql.version>
+    </properties>
+```
+
+
+
+
+
+## 自动配置
+
+springBoot会：
+
+- 自动配好Tomcat
+
+- - 引入Tomcat依赖。
+  - 配置Tomcat
+
+- 自动配好SpringMVC
+
+- - 引入SpringMVC全套组件
+  - 自动配好SpringMVC常用组件（功能）
+
+- 自动配好Web常见功能，如：字符编码问题
+
+- - SpringBoot帮我们配置好了所有web开发的常见场景
+
+- 
+
+- **⭐默认的包结构**
+
+- - **主程序所在包及其下面的所有子包**里面的组件都会被默认扫描进来
+
+    （com.springboot下面所有包都会被扫描）
+
+    ![image-20221219182904809](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221219182904809.png)
+
+  - 无需以前的包扫描配置
+
+  - **想要改变扫描路径**，@SpringBootApplication(scanBasePackages=**"com"**)
+
+- - - **或者@ComponentScan 指定扫描路径**
+
+```java
+@SpringBootApplication
+等同于
+@SpringBootConfiguration
+@EnableAutoConfiguration
+@ComponentScan("com.atguigu.boot")
+```
+
+
+
+- 各种配置拥有默认值
+
+- - 默认配置最终都是映射到某个类上，如：MultipartProperties
+  - 配置文件的值最终会绑定每个类上，这个类会在容器中创建对象
+
+- 按需加载所有自动配置项
+
+- - 非常多的starter
+  - 引入了哪些场景这个场景的自动配置才会开启
+  - SpringBoot所有的自动配置功能都在 spring-boot-autoconfigure 包里面
+  - 
+
+- ......
+
+
+
+
+
+## 容器相关
+
+### @Configuartion
+
+- **Full模式** ----- @Configuration(proxyBeanMethods = true) 
+
+- **Lite模式** ----- @Configuration(proxyBeanMethods = false) 
+
+  Full模式会扫描AOC容器中是否有该配置组件，然后返回容器中的单实例组件
+
+  Lite模式不会扫描，每次都返回新的实例组件
+
+  
+
+  配置类组件之间无依赖关系用Lite模式加速容器启动过程，减少判断
+
+  配置类组件之间有依赖关系，方法会被调用得到之前单实例组件，用Full模式
+
+```java
+#############################Configuration使用示例######################################################
+/**
+ * 1、配置类里面使用@Bean标注在方法上给容器注册组件，默认也是单实例的
+ * 2、配置类本身也是组件
+ * 3、proxyBeanMethods：代理bean的方法
+ *      Full(proxyBeanMethods = true)、【保证每个@Bean方法被调用多少次返回的组件都是单实例的】
+ *      Lite(proxyBeanMethods = false)【每个@Bean方法被调用多少次返回的组件都是新创建的】
+ *      组件依赖必须使用Full模式默认。其他默认是否Lite模式
+ *
+ *
+ *
+ */
+@Configuration(proxyBeanMethods = false) //告诉SpringBoot这是一个配置类 == 配置文件
+public class MyConfig {
+
+    /**
+     * Full:外部无论对配置类中的这个组件注册方法调用多少次获取的都是之前注册容器中的单实例对象
+     * @return
+     */
+    @Bean //给容器中添加组件。以方法名作为组件的id。返回类型就是组件类型。返回的值，就是组件在容器中的实例
+    public User user01(){
+        User zhangsan = new User("zhangsan", 18);
+        //user组件依赖了Pet组件
+        zhangsan.setPet(tomcatPet());
+        return zhangsan;
+    }
+
+    @Bean("tom")	//设置别名
+    public Pet tomcatPet(){
+        return new Pet("tomcat");
+    }
+}
+
+
+################################@Configuration测试代码如下########################################
+@SpringBootConfiguration
+@EnableAutoConfiguration
+@ComponentScan("com.atguigu.boot")
+public class MainApplication {
+
+    public static void main(String[] args) {
+        //1、返回我们IOC容器
+        ConfigurableApplicationContext run = SpringApplication.run(MainApplication.class, args);
+
+        //2、查看容器里面的组件
+        String[] names = run.getBeanDefinitionNames();
+        for (String name : names) {
+            System.out.println(name);
+        }
+
+        //3、从容器中获取组件
+
+        Pet tom01 = run.getBean("tom", Pet.class);
+        Pet tom02 = run.getBean("tom", Pet.class);
+        System.out.println("组件："+(tom01 == tom02));
+
+        //4、com.atguigu.boot.config.MyConfig$$EnhancerBySpringCGLIB$$51f1e1ca@1654a892
+        MyConfig bean = run.getBean(MyConfig.class);
+        System.out.println(bean);
+
+        //如果@Configuration(proxyBeanMethods = true)代理对象调用方法。SpringBoot总会检查这个组件是否在容器中有。
+        //保持组件单实例
+        User user = bean.user01();
+        User user1 = bean.user01();
+        System.out.println(user == user1);
+
+
+        User user01 = run.getBean("user01", User.class);
+        Pet tom = run.getBean("tom", Pet.class);
+
+        System.out.println("用户的宠物："+(user01.getPet() == tom));
+
+    }
+}
+
+```
+
+
+
+
+
+
+
+### @Import
+
+```java
+ /* @Import({User.class, DBHelper.class})
+ *      给容器中自动创建出这两个类型的组件、默认组件的名字就是全类名
+ *
+ *
+ *
+ */
+@Import({User.class, DBHelper.class})
+@Configuration(proxyBeanMethods = false) //告诉SpringBoot这是一个配置类 == 配置文件
+public class MyConfig {
+}
+```
+
+
+
+
+
+### @Conditional
+
+满足Conditional指定的条件，则进行组件注入
+
+包括：
+
+![image-20221219191359710](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221219191359710.png)
+
+```java
+=====================测试条件装配==========================
+@Configuration(proxyBeanMethods = false) //告诉SpringBoot这是一个配置类 == 配置文件
+//@ConditionalOnBean(name = "tom")
+@ConditionalOnMissingBean(name = "tom")	//如果容器内不包含叫tom的bean，那么执行注入该类下的所有组件
+public class MyConfig {
+
+
+    /**
+     * Full:外部无论对配置类中的这个组件注册方法调用多少次获取的都是之前注册容器中的单实例对象
+     * @return
+     */
+
+    @Bean //给容器中添加组件。以方法名作为组件的id。返回类型就是组件类型。返回的值，就是组件在容器中的实例
+    public User user01(){
+        User zhangsan = new User("zhangsan", 18);
+        //user组件依赖了Pet组件
+        zhangsan.setPet(tomcatPet());
+        return zhangsan;
+    }
+
+    @Bean("tom22")
+    public Pet tomcatPet(){
+        return new Pet("tomcat");
+    }
+}
+
+public static void main(String[] args) {
+        //1、返回我们IOC容器
+        ConfigurableApplicationContext run = SpringApplication.run(MainApplication.class, args);
+
+        //2、查看容器里面的组件
+        String[] names = run.getBeanDefinitionNames();
+        for (String name : names) {
+            System.out.println(name);
+        }
+
+        boolean tom = run.containsBean("tom");
+        System.out.println("容器中Tom组件："+tom);
+
+        boolean user01 = run.containsBean("user01");
+        System.out.println("容器中user01组件："+user01);
+
+        boolean tom22 = run.containsBean("tom22");
+        System.out.println("容器中tom22组件："+tom22);
+
+
+    }
+```
+
+
+
+
+
+
+
+### @ImportResource
+
+导入原生配置文件
+
+有时候之前开发并不是通过配置类来进行配置，这时需要导入以前的xml配置文件，用到@ImportResource
+
+```java
+@ImportResource("classpath:beans.xml")
+public class MyConfig {
+    
+}
+```
+
+
+
+
+
+### @ConfigurationProperties
+
+读取到properties文件中的内容，并且把它封装到JavaBean中，以供随时使用
+
+
+
+假设有properties文件
+
+```properties
+mycar.price=100
+mycar.brand=Tesla
+```
+
+
+
+第一种方法：**@Component + @ConfigurationProperties**(prefix = "mycar")
+
+根据**application.properties**文件中**前缀(prefix)为mycar** 的属性为类属性赋值，然后放入IOC容器
+
+```java
+/**
+ * 只有在容器中的组件，才会拥有SpringBoot提供的强大功能
+ */
+@Component
+@ConfigurationProperties(prefix = "mycar")
+public class Car {
+
+    private String brand;
+    private Integer price;
+
+    public String getBrand() {
+        return brand;
+    }
+
+    public void setBrand(String brand) {
+        this.brand = brand;
+    }
+
+    public Integer getPrice() {
+        return price;
+    }
+
+    public void setPrice(Integer price) {
+        this.price = price;
+    }
+
+    @Override
+    public String toString() {
+        return "Car{" +
+                "brand='" + brand + '\'' +
+                ", price=" + price +
+                '}';
+    }
+}
+```
+
+
+
+
+
+第二种方法：**@EnableConfigurationProperties + @ConfigurationProperties**
+
+@EnableConfigurationProperties 即与 一个配置文件类进行绑定
+
+```java
+//@Component  不适用@Component注解
+@ConfigurationProperties(prefix = "mycar")
+public class Car {
+    ...
+}
+```
+
+
+
+```java
+@EnableConfigurationProperties(Car.class)
+//1、开启Car配置绑定功能
+//2、把这个Car这个组件自动注册到容器中
+public class MyConfig {
+}
+```
+
+
+
+
+
+### SpringBoot的自动配置
+
+@SpringBootApplication包括：
+
+​	1、@SpringBootConfiguration
+
+​			@Configuration。代表当前是一个配置类
+
+​	2、@ComponentScan
+
+​			指定扫描哪些，Spring注解；
+
+​	3、**@EnableAutoConfiguration** 包含：
+
+​			1、@AutoConfigurationPackage  **(导入自己项目的组件)**
+
+​					将**MainApplication 所在包下的所有组件**导入进来
+
+​			2、 @Import(AutoConfigurationImportSelector.class)  **（导入一些默认组件）**
+
+```java
+1、利用getAutoConfigurationEntry(annotationMetadata);给容器中批量导入一些组件
+2、调用List<String> configurations = getCandidateConfigurations(annotationMetadata, attributes)获取到所有需要导入到容器中的配置类
+3、利用工厂加载 Map<String, List<String>> loadSpringFactories(@Nullable ClassLoader classLoader)；得到所有的组件
+4、从META-INF/spring.factories位置来加载一个文件。
+	默认扫描我们当前系统里面所有META-INF/spring.factories位置的文件
+    spring-boot-autoconfigure-2.3.4.RELEASE.jar包里面也有META-INF/spring.factories
+```
+
+
+
+
+
+SpringBoot默认会在底层配好所有的组件。但是如果用户自己配置了以用户的优先。
+
+总结：
+
+- SpringBoot先加载所有的自动配置类  xxxxxAutoConfiguration
+- 每个自动配置类按照条件进行生效，默认都会绑定配置文件指定的值。xxxxProperties里面拿。xxxProperties和配置文件进行了绑定
+- 生效的配置类就会给容器中装配很多组件
+- 只要容器中有这些组件，相当于这些功能就有了
+- 定制化配置
+
+- - 用户**直接**自己**@Bean**替换底层的组件
+  - 用户去application.properties文件里改。
+
+**xxxxxAutoConfiguration ---> 组件  --->** **xxxxProperties里面拿值  ----> application.properties**
+
+
+
+
+
+## 🤗有用的插件
+
+### lombok
+
+可以免去get/set 构造器 和toString等方法
+
+
+
+导入依赖
+
+```
+ <dependency>
+      <groupId>org.projectlombok</groupId>
+      <artifactId>lombok</artifactId>
+    </dependency>
+```
+
+@Data提供set/get方法
+
+@ToString提供toString方法
+
+@NoArgsConstructor提供无参构造器
+
+@AllArgsConstructor提供有参构造器
+
+@EqualsAndHashCode提供equals和hashcode方法
+
+@Slf4j简化日志开发
+
+
+
+
+
+### dev-tools
+
+代码有更改之后，重新启动应用，但是速度比手动停止后再启动还要更快，更快指的不是节省出来的手工操作的时间。
+
+​	其深层原理是使用了两个ClassLoader，一个Classloader加载那些不会改变的类（第三方Jar包），另一个ClassLoader加载会更改的类，称为  restart ClassLoader ,这样在有代码更改的时候，原来的restart ClassLoader 被丢弃，重新创建一个restart ClassLoader，由于需要加载的类相比较少，所以实现了较快的重启时间（5秒以内）。
+
+
+
+```xml
+<dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <optional>true</optional>
+        </dependency>
+```
+
+**项目或者页面修改以后：Ctrl+F9**
+
+
+
+### Spring Initailizr
+
+IDEA自带，用于简化创建项目
+
+![image-20221219210346563](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221219210346563.png)
+
+
+
+然后勾选用到的依赖
+
+![image-20221219210447991](http://hzc-typora.oss-cn-shanghai.aliyuncs.com/img/image-20221219210447991.png)
+
+
+
+
+
+
+
+## yaml标记语言
+
+语法：
+
+- key: value；kv之间有**空格**
+- 大小写敏感
+- 使用缩进表示层级关系
+- 缩进不允许使用tab，只允许空格
+- 缩进的空格数不重要，只要相同层级的元素左对齐即可
+- '#'表示注释
+- 字符串无需加引号，如果要加，单引号中的转义字符会被转义（'abc\nabc'对应abc\nabc ）,双引号中的转义字符不会被转义（"abc\t"对应abc    ）(\t的转义功能照常发挥)
+
+
+
+不同数据类型：
+
+```yaml
+#字面量：单个的、不可再分的值。date、boolean、string、number、null
+k: v
+
+#对象：键值对的集合。map、hash、set、object 
+#1.
+k: {k1:v1,k2:v2,k2:v3}	#中括号内的冒号后不用加空格
+#2.
+k:
+ k1: v1
+ k2: v2
+ k3: v3
+
+#数组：一组按次序排列的值。array、list、queue
+#1.
+k: [v1,v2,v3]
+#2.
+k: 
+ - v1
+ - v2
+ - v3
+ 
+ 
+```
+
+
+
+### 配置提示
+
+自定义的类和配置文件绑定一般没有提示。
+
+
+
+添加依赖
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-configuration-processor</artifactId>
+    <optional>true</optional>
+</dependency>
+```
+
+
+
+并且在build中加上
+
+```xml
+<build>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <version>${project.parent.version}</version>
+		<!-- 别把绑定的配置文件打包，节省内存和时间-->
+        <configuration>
+          <excludes>
+            <exclude>
+              <groupId>org.springframework.boot</groupId>
+              <artifactId>spring-boot-configuration-processor</artifactId>
+            </exclude>
+          </excludes>
+        </configuration>
+		<!-- -->
+      </plugin>
+    </plugins>
+  </build>
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+- ## 
+
+- 
+
+- 
+
+- 
+
+- - 
