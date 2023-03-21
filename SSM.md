@@ -525,7 +525,7 @@ ${}的本质就是字符串拼接，#{}的本质就是占位符赋值
 
 4. 查询一条数据，形成map
 
-   返回值设置为Map<>(Map<String,Object>)
+   返回值设置为Map<>  (Map<String,Object>)
 
    mapper配置中，reultType为map。
 
